@@ -20,6 +20,7 @@ def load_processed_csv(
     dataframe.to_csv(
         path,
         index=False,
+        encoding="utf-8",
     )
 
     print(
@@ -27,4 +28,4 @@ def load_processed_csv(
         f"into {path}"
     )
 
-    return path 
+    return path

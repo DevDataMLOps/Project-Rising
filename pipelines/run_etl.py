@@ -40,7 +40,7 @@ METADATA_OUTPUT_PATH = (
 )
 
 
-def process_metadata() -> None:
+def process_metadata() -> bool:
     """
     Process SDG3 metadata into indicator-level documentation.
     """
@@ -49,7 +49,7 @@ def process_metadata() -> None:
             f"Skipped metadata: {METADATA_RAW_FILE.name} "
             "was not found."
         )
-        return
+        return False
 
     print(f"\nProcessing metadata {METADATA_RAW_FILE.name}")
 
@@ -62,6 +62,8 @@ def process_metadata() -> None:
         dataframe=transformed_metadata,
         output_path=METADATA_OUTPUT_PATH,
     )
+
+    return True
 
 
 def run_pipeline() -> None:
@@ -77,42 +79,58 @@ def run_pipeline() -> None:
     ]
 
     processed_datasets: list[pd.DataFrame] = []
+    skipped_files: list[str] = []
 
     for csv_file in csv_files:
         print(f"\nProcessing {csv_file.name}")
 
-        raw_dataframe = extract_csv(csv_file)
+        try:
+            raw_dataframe = extract_csv(csv_file)
 
-        indicator_name = indicator_from_filename(
-            csv_file.name
-        )
+            indicator_name = indicator_from_filename(
+                csv_file.name
+            )
 
-        transformed_dataframe = (
-            transform_health_data(
+            transformed_dataframe = transform_health_data(
                 dataframe=raw_dataframe,
                 indicator_name=indicator_name,
             )
-        )
 
-        if transformed_dataframe.empty:
-            print(
-                f"Skipped {csv_file.name}: "
-                "no usable country-year-value records were found."
+            if transformed_dataframe.empty:
+                print(
+                    f"Skipped {csv_file.name}: "
+                    "no usable ASEAN country-year-value "
+                    "records were found."
+                )
+                skipped_files.append(csv_file.name)
+                continue
+
+            warnings = validate_health_data(
+                transformed_dataframe
             )
+
+            if warnings:
+                for warning in warnings:
+                    print(f"Validation warning: {warning}")
+            else:
+                print("Validation passed")
+
+            processed_datasets.append(
+                transformed_dataframe
+            )
+
+        except (
+            ValueError,
+            FileNotFoundError,
+            NotADirectoryError,
+        ) as error:
+            print(f"Skipped {csv_file.name}: {error}")
+            skipped_files.append(csv_file.name)
             continue
 
-        warnings = validate_health_data(
-            transformed_dataframe
-        )
-
-        if warnings:
-            for warning in warnings:
-                print(f"Validation warning: {warning}")
-        else:
-            print("Validation passed")
-
-        processed_datasets.append(
-            transformed_dataframe
+    if not processed_datasets:
+        raise RuntimeError(
+            "ETL failed: no datasets produced usable records."
         )
 
     combined_dataframe = pd.concat(
@@ -120,8 +138,22 @@ def run_pipeline() -> None:
         ignore_index=True,
     )
 
+    duplicate_columns = [
+        "country",
+        "year",
+        "indicator",
+    ]
+
+    for optional_column in [
+        "sub_indicator",
+        "sex",
+    ]:
+        if optional_column in combined_dataframe.columns:
+            duplicate_columns.append(optional_column)
+
     combined_dataframe = (
         combined_dataframe
+        .drop_duplicates(subset=duplicate_columns)
         .sort_values(
             by=[
                 "indicator",
@@ -137,17 +169,25 @@ def run_pipeline() -> None:
         output_path=PROCESSED_DATA_PATH,
     )
 
-    process_metadata()
+    metadata_processed = process_metadata()
 
+    print("\nETL pipeline completed successfully.")
+    print(f"CSV files discovered: {len(csv_files)}")
+    print(f"Datasets processed: {len(processed_datasets)}")
+    print(f"Datasets skipped: {len(skipped_files)}")
     print(
-        "\nETL pipeline completed successfully."
+        f"Metadata processed: "
+        f"{'yes' if metadata_processed else 'no'}"
+    )
+    print(
+        f"Combined records created: "
+        f"{len(combined_dataframe)}"
     )
 
-    print(
-        f"Processed {len(csv_files)} datasets "
-        f"and created {len(combined_dataframe)} "
-        "combined records."
-    )
+    if skipped_files:
+        print("\nSkipped files:")
+        for skipped_file in skipped_files:
+            print(f"- {skipped_file}")
 
 
 if __name__ == "__main__":
