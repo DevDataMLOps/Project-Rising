@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 *.py[cod]
 .pytest_cache/
+data/streaming/
