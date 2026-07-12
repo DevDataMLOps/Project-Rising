@@ -6,9 +6,13 @@ import pandas as pd
 ASEAN_COUNTRIES = {
     "brunei": "Brunei",
     "brunei darussalam": "Brunei",
+    "brunnei darussalam": "Brunei",
     "cambodia": "Cambodia",
     "indonesia": "Indonesia",
     "lao pdr": "Laos",
+    "laos pdr": "Laos",
+    "lao s pdr": "Laos",
+    "lao people s democratic republic": "Laos",
     "lao people's democratic republic": "Laos",
     "laos": "Laos",
     "malaysia": "Malaysia",
@@ -17,8 +21,14 @@ ASEAN_COUNTRIES = {
     "singapore": "Singapore",
     "thailand": "Thailand",
     "timor-leste": "Timor-Leste",
+    "timor leste": "Timor-Leste",
     "viet nam": "Vietnam",
     "vietnam": "Vietnam",
+}
+
+
+INDICATOR_NAME_ALIASES = {
+    "goverment_expence_in_health": "government_expenditure_in_health",
 }
 
 
@@ -57,13 +67,17 @@ VALUE_COLUMN_CANDIDATES = [
 
 METADATA_COLUMNS = {
     "country",
+    "year",
     "indicator",
     "indicators",
+    "sub_indicator",
+    "sex",
     "unit",
     "source",
     "source_link",
     "remarks",
     "description",
+    "reference_year_s",
 }
 
 
@@ -74,11 +88,7 @@ def clean_column_name(
     Convert a column name into lowercase snake_case.
     """
     cleaned = str(column_name).strip().lower()
-    cleaned = re.sub(
-        r"[^a-z0-9]+",
-        "_",
-        cleaned,
-    )
+    cleaned = re.sub(r"[^a-z0-9]+", "_", cleaned)
 
     return cleaned.strip("_")
 
@@ -94,6 +104,9 @@ def standardize_country(
 
     original_name = str(country).strip()
     cleaned_name = original_name.lower()
+    cleaned_name = cleaned_name.rstrip("*").strip()
+    cleaned_name = re.sub(r"[^a-z0-9]+", " ", cleaned_name)
+    cleaned_name = re.sub(r"\s+", " ", cleaned_name).strip()
 
     return ASEAN_COUNTRIES.get(
         cleaned_name,
@@ -112,7 +125,74 @@ def indicator_from_filename(
         maxsplit=1,
     )[0]
 
-    return clean_column_name(file_stem)
+    indicator = clean_column_name(file_stem)
+
+    return INDICATOR_NAME_ALIASES.get(
+        indicator,
+        indicator,
+    )
+
+
+def extract_year_from_column(
+    column_name: object,
+) -> int | None:
+    """
+    Extract a four-digit year from the start of a column name.
+    """
+    match = re.match(
+        r"^(19|20)\d{2}",
+        str(column_name).strip(),
+    )
+
+    if match is None:
+        return None
+
+    return int(match.group(0))
+
+
+def extract_sex_from_column(
+    column_name: object,
+) -> str | None:
+    """
+    Extract sex from year columns such as 2004M and 2004F.
+    """
+    cleaned = clean_column_name(column_name)
+    match = re.match(
+        r"^(19|20)\d{2}([mf])(?:_(\d+))?$",
+        cleaned,
+    )
+
+    if match is None:
+        return None
+
+    sex_code = match.group(2)
+    duplicate_suffix = match.group(3)
+
+    if sex_code == "f" or duplicate_suffix == "1":
+        return "Female"
+
+    return "Male"
+
+
+def clean_numeric_value(
+    value: object,
+) -> str | None:
+    """
+    Clean numeric strings such as 38 000, 1,130.90, and <500.
+    """
+    if pd.isna(value):
+        return None
+
+    cleaned = str(value).strip()
+
+    if not cleaned:
+        return None
+
+    cleaned = cleaned.replace("<", "")
+    cleaned = cleaned.replace(",", "")
+    cleaned = re.sub(r"\s+", "", cleaned)
+
+    return cleaned
 
 
 def find_country_column(
@@ -136,21 +216,52 @@ def find_wide_year_columns(
 ) -> list[str]:
     """
     Find columns that begin with a four-digit year.
-
-    Examples:
-        2004
-        2004dpt
-        2005_measles
-        2010_rate
     """
     return [
         column
         for column in dataframe.columns
-        if re.match(
-            r"^\d{4}",
-            str(column),
-        )
+        if extract_year_from_column(column) is not None
     ]
+
+
+def find_value_column(
+    dataframe: pd.DataFrame,
+) -> str:
+    """
+    Find the value column in an already-long dataset.
+    """
+    for candidate in VALUE_COLUMN_CANDIDATES:
+        if candidate in dataframe.columns:
+            return candidate
+
+    candidate_columns = [
+        column
+        for column in dataframe.columns
+        if column not in METADATA_COLUMNS
+    ]
+
+    numeric_candidates = [
+        column
+        for column in candidate_columns
+        if pd.to_numeric(
+            dataframe[column].apply(clean_numeric_value),
+            errors="coerce",
+        ).notna().any()
+    ]
+
+    if len(numeric_candidates) == 1:
+        return numeric_candidates[0]
+
+    if not numeric_candidates:
+        raise ValueError(
+            "No value column was found. "
+            f"Available columns: {list(dataframe.columns)}"
+        )
+
+    raise ValueError(
+        "Multiple possible value columns were found: "
+        f"{numeric_candidates}"
+    )
 
 
 def find_long_format_columns(
@@ -168,98 +279,57 @@ def find_long_format_columns(
         None,
     )
 
-    value_column = next(
-        (
-            column
-            for column in VALUE_COLUMN_CANDIDATES
-            if column in dataframe.columns
-        ),
-        None,
-    )
+    if year_column is None:
+        return None, None
 
-    if year_column is not None and value_column is None:
-        excluded_columns = (
-            METADATA_COLUMNS
-            | {year_column}
-        )
+    return year_column, find_value_column(dataframe)
 
-        remaining_columns = [
-            column
-            for column in dataframe.columns
-            if column not in excluded_columns
+
+def metadata_columns_for_melt(
+    dataframe: pd.DataFrame,
+) -> list[str]:
+    """
+    Keep source metadata columns during wide-to-long conversion.
+    """
+    return [
+        column
+        for column in [
+            "indicators",
+            "unit",
+            "source",
         ]
+        if column in dataframe.columns
+    ]
 
-        numeric_candidates: list[str] = []
 
-        for column in remaining_columns:
-            numeric_values = pd.to_numeric(
-                dataframe[column],
-                errors="coerce",
+def add_optional_output_columns(
+    dataframe: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Add optional output columns used by richer datasets.
+    """
+    transformed = dataframe.copy()
+
+    if "indicators" in transformed.columns:
+        transformed["sub_indicator"] = transformed[
+            "indicators"
+        ].apply(
+            lambda value: (
+                str(value).strip()
+                if not pd.isna(value)
+                else None
             )
-
-            if numeric_values.notna().any():
-                numeric_candidates.append(column)
-
-        if len(numeric_candidates) == 1:
-            value_column = numeric_candidates[0]
-
-    return year_column, value_column
-
-
-def convert_wide_to_long(
-    dataframe: pd.DataFrame,
-    year_columns: list[str],
-) -> pd.DataFrame:
-    """
-    Convert wide year columns into year-value rows.
-    """
-    melted = dataframe.melt(
-        id_vars=["country"],
-        value_vars=year_columns,
-        var_name="source_year_column",
-        value_name="value",
-    )
-
-    melted["year"] = (
-        melted["source_year_column"]
-        .astype(str)
-        .str.extract(
-            r"^(\d{4})",
-            expand=False,
         )
-    )
+    elif "sub_indicator" not in transformed.columns:
+        transformed["sub_indicator"] = None
 
-    return melted[
-        [
-            "country",
-            "year",
-            "value",
-        ]
-    ]
+    if "unit" not in transformed.columns:
+        transformed["unit"] = None
 
+    if "sex" not in transformed.columns:
+        transformed["sex"] = None
 
-def convert_long_format(
-    dataframe: pd.DataFrame,
-    year_column: str,
-    value_column: str,
-) -> pd.DataFrame:
-    """
-    Standardize an existing long-format dataset.
-    """
-    converted = dataframe.rename(
-        columns={
-            year_column: "year",
-            value_column: "value",
-        }
-    )
-
-    return converted[
-        [
-            "country",
-            "year",
-            "value",
-        ]
-    ]
+    return transformed
 
 
 def transform_health_data(
@@ -268,12 +338,6 @@ def transform_health_data(
 ) -> pd.DataFrame:
     """
     Transform one ASEAN health dataset into the common format.
-
-    Output columns:
-        country
-        year
-        indicator
-        value
     """
     transformed = dataframe.copy()
 
@@ -284,59 +348,59 @@ def transform_health_data(
 
     transformed = transformed.loc[
         :,
-        ~transformed.columns.str.startswith(
-            "unnamed"
-        ),
+        ~transformed.columns.str.startswith("unnamed"),
     ]
 
-    country_column = find_country_column(
-        transformed
-    )
+    country_column = find_country_column(transformed)
 
     transformed = transformed.rename(
-        columns={
-            country_column: "country",
-        }
+        columns={country_column: "country"}
     )
 
-    transformed["country"] = (
-        transformed["country"]
-        .apply(standardize_country)
-    )
+    transformed["country"] = transformed[
+        "country"
+    ].apply(standardize_country)
 
-    wide_year_columns = find_wide_year_columns(
-        transformed
-    )
+    wide_year_columns = find_wide_year_columns(transformed)
 
     if wide_year_columns:
-        transformed = convert_wide_to_long(
-            dataframe=transformed,
-            year_columns=wide_year_columns,
+        metadata_columns = metadata_columns_for_melt(
+            transformed
         )
+
+        transformed = transformed.melt(
+            id_vars=["country", *metadata_columns],
+            value_vars=wide_year_columns,
+            var_name="year_column",
+            value_name="value",
+        )
+
+        transformed["sex"] = transformed[
+            "year_column"
+        ].apply(extract_sex_from_column)
+
+        transformed["year"] = transformed[
+            "year_column"
+        ].apply(extract_year_from_column)
 
     else:
-        year_column, value_column = (
-            find_long_format_columns(
-                transformed
-            )
+        year_column, value_column = find_long_format_columns(
+            transformed
         )
 
-        if (
-            year_column is None
-            or value_column is None
-        ):
+        if year_column is None or value_column is None:
             raise ValueError(
                 "Dataset must contain either wide year "
                 "columns or recognizable year and value "
                 "columns. "
-                f"Available columns: "
-                f"{list(transformed.columns)}"
+                f"Available columns: {list(transformed.columns)}"
             )
 
-        transformed = convert_long_format(
-            dataframe=transformed,
-            year_column=year_column,
-            value_column=value_column,
+        transformed = transformed.rename(
+            columns={
+                year_column: "year",
+                value_column: "value",
+            }
         )
 
     transformed["year"] = pd.to_numeric(
@@ -345,11 +409,12 @@ def transform_health_data(
     )
 
     transformed["value"] = pd.to_numeric(
-        transformed["value"],
+        transformed["value"].apply(clean_numeric_value),
         errors="coerce",
     )
 
     transformed["indicator"] = indicator_name
+    transformed = add_optional_output_columns(transformed)
 
     transformed = transformed.dropna(
         subset=[
@@ -365,28 +430,22 @@ def transform_health_data(
                 "country",
                 "year",
                 "indicator",
+                "sub_indicator",
+                "sex",
+                "unit",
                 "value",
             ]
         )
 
-    transformed["year"] = (
-        transformed["year"]
-        .astype(int)
-    )
+    transformed["year"] = transformed["year"].astype(int)
 
     transformed = transformed[
-        transformed["country"].isin(
-            ASEAN_COUNTRIES.values()
-        )
+        transformed["country"].isin(ASEAN_COUNTRIES.values())
     ]
 
     transformed = transformed[
-        (
-            transformed["year"] >= 1900
-        )
-        & (
-            transformed["year"] <= 2100
-        )
+        (transformed["year"] >= 1900)
+        & (transformed["year"] <= 2100)
     ]
 
     transformed = transformed.drop_duplicates(
@@ -394,6 +453,8 @@ def transform_health_data(
             "country",
             "year",
             "indicator",
+            "sub_indicator",
+            "sex",
         ]
     )
 
@@ -402,6 +463,9 @@ def transform_health_data(
             "country",
             "year",
             "indicator",
+            "sub_indicator",
+            "sex",
+            "unit",
             "value",
         ]
     ]
@@ -409,8 +473,10 @@ def transform_health_data(
     transformed = transformed.sort_values(
         by=[
             "indicator",
+            "sub_indicator",
             "country",
             "year",
+            "sex",
         ]
     ).reset_index(drop=True)
 
