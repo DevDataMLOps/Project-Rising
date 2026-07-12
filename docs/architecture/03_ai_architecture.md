@@ -1,115 +1,119 @@
 # Project RISING AI Architecture
 
-## Objective
+## Role of AI
 
-The AI layer helps public-health decision-makers understand historical trends,
-forecast future outcomes, detect unusual patterns, and identify countries that
-may require additional healthcare investment.
+AI is a downstream layer in Project RISING, not the foundation of the MVP.
 
-## AI Architecture Diagram
+The foundation is the resilient data pipeline. AI should only run on data that has already passed validation, retry handling, deduplication, and warehouse loading.
+
+In other words:
+
+```text
+Reliable data first.
+AI insights second.
+```
+
+## Why AI Is Downstream
+
+During climate disruption, the first problem is not prediction. The first problem is data continuity.
+
+If records are lost, delayed, duplicated, or malformed, AI outputs become unreliable. Project RISING therefore prioritizes:
+
+- Data validation.
+- Retry and recovery.
+- DLQ isolation.
+- Idempotent processing.
+- Warehouse synchronization.
+
+Once those are stable, AI can help decision-makers interpret the trusted data.
+
+## Future AI Flow
 
 ```mermaid
 flowchart LR
-    A[Processed Health Data] --> B[Feature Engineering]
-    B --> C[Training Dataset]
-    C --> D[Machine-Learning Model]
+    A[(PostgreSQL Warehouse)] --> B[Feature Engineering]
+    B --> C[Trend Analysis]
+    B --> D[Risk Scoring]
+    B --> E[Forecasting Models]
 
-    D --> E[Health Indicator Forecast]
-    D --> F[Anomaly Detection]
-    D --> G[Vulnerability Score]
+    C --> F[Explainable Insights]
+    D --> F
+    E --> F
 
-    E --> H[Explainable AI Layer]
-    F --> H
-    G --> H
-
-    H --> I[Policy Recommendation]
-    H --> J[Dashboard Insight]
-    H --> K[FastAPI Response]
+    F --> G[Public-Health Decision Support]
 ```
 
-## AI Functions
+## Possible Future AI Capabilities
 
-### 1. Forecasting
+### 1. Health Trend Forecasting
 
-The system forecasts future values for indicators such as:
+Forecast future values for indicators such as:
 
-- Life expectancy
-- Infant mortality
-- Under-five mortality
-- Maternal mortality
+- Life expectancy.
+- Infant mortality.
+- Under-five mortality.
+- Maternal mortality.
+- Government health expenditure.
 
-Initial models:
+### 2. Climate-Health Risk Scoring
 
-- Linear regression
-- Random forest regression
-- Gradient boosting regression
-
-### 2. Anomaly Detection
-
-The system identifies unusual changes.
+Combine climate and health indicators to estimate risk.
 
 Example:
-
-> Maternal mortality increased sharply compared with the country's historical
-> trend.
-
-### 3. Health Vulnerability Scoring
-
-The system combines multiple indicators into a vulnerability score.
-
-Possible inputs:
-
-- Infant mortality
-- Maternal mortality
-- Under-five mortality
-- Life expectancy
-- Undernourishment
-- Healthcare expenditure
-
-Example scoring logic:
 
 ```text
-High mortality
-+ Low life expectancy
-+ High undernourishment
-+ Low healthcare investment
-= Higher vulnerability score
+Heavy rainfall
++ high humidity
++ weak health-system capacity
++ historical disease burden
+= higher climate-health vulnerability
 ```
 
-### 4. Explainable AI
+### 3. Anomaly Detection
 
-Every model output should include an understandable explanation.
+Detect unusual changes in health indicators or weather-linked event patterns.
 
 Example:
 
-> The predicted increase in health vulnerability is mainly associated with
-> persistent under-five mortality and low healthcare expenditure.
+```text
+A country records a sudden increase in mortality or weather-risk events compared with its historical trend.
+```
 
-## MVP AI Scope
+### 4. Explainable Decision Support
 
-The hackathon MVP will begin with:
+Convert analytics into readable summaries for public-health teams.
 
-1. One forecasting model
-2. One health vulnerability score
-3. Rule-based explainable insights
-4. Model evaluation metrics
+Example:
 
-## Model Evaluation
+```text
+The current vulnerability score is elevated because rainfall is high, under-five mortality remains above the regional average, and health expenditure is below peer countries.
+```
 
-Possible evaluation metrics:
+## MVP Position
 
-- Mean Absolute Error
-- Mean Squared Error
-- Root Mean Squared Error
-- R-squared score
+For the hackathon MVP, AI should be presented as future decision support.
+
+The current project demonstrates the more important prerequisite:
+
+```text
+Can we keep trusted data flowing when climate disruption breaks normal connectivity?
+```
+
+That resilient data foundation makes future AI credible.
 
 ## Responsible AI Principles
 
-Project RISING follows these principles:
+Future AI work should follow these principles:
 
-- Use aggregated public-health data
-- Avoid patient-level identification
-- Explain model outputs
-- Document limitations
-- Prevent unsupported medical conclusions
-- Keep human decision-makers in control
+- Use aggregated public-health data.
+- Avoid patient-level identification.
+- Explain model outputs.
+- Document limitations.
+- Avoid unsupported medical conclusions.
+- Keep human decision-makers in control.
+
+## Summary
+
+AI remains part of the Project RISING roadmap, but the MVP story is data engineering resilience.
+
+Judges should understand that Project RISING does not claim useful AI without first proving trustworthy data movement.

@@ -2,86 +2,149 @@
 
 ## Purpose
 
-This document explains how data moves through Project RISING from raw ASEAN
-datasets to dashboards, machine-learning predictions, and AI-generated
-recommendations.
+This document explains how Project RISING moves data from raw inputs to trusted outputs while protecting records during connectivity failures.
 
-## Data Flow Diagram
+The data flow is designed to answer one question:
+
+```text
+What happens to health and climate data when the network is unreliable?
+```
+
+## Hybrid Pipeline Flow
 
 ```mermaid
 flowchart TD
-    A[Raw ASEAN CSV Files] --> B[Extract Data]
-    B --> C[Inspect Columns and Data Types]
-    C --> D[Standardize Column Names]
-    D --> E[Standardize Country Names]
-    E --> F[Convert Years to Integers]
-    F --> G[Convert Indicator Values to Numeric]
-    G --> H[Handle Missing Values]
-    H --> I[Remove Duplicates]
-    I --> J[Validate Data Quality]
-    J --> K[Create Long-Format Dataset]
-    K --> L[Save Processed Data]
-    L --> M[(PostgreSQL Database)]
+    A[Historical Health CSV Files] --> B[Extract CSV Data]
+    B --> C[Transform and Standardize]
+    C --> D[Validate Health Records]
 
-    M --> N[Analytics Engine]
-    M --> O[Machine-Learning Engine]
+    E[Weather / Sensor Event Stream] --> F[Generate or Receive Events]
+    F --> G[Validate Event Schema]
 
-    N --> P[FastAPI]
-    O --> Q[Predictions]
-    Q --> P
+    D --> H{Record Valid?}
+    G --> H
 
-    P --> R[Streamlit Dashboard]
-    P --> S[AI Insight Generator]
-    S --> R
+    H -->|No| I[Dead Letter Queue]
+    H -->|Yes| J{Connectivity Available?}
+
+    J -->|No| K[Retry Queue / Local Buffer]
+    K --> L[Backoff and Retry]
+    L --> J
+
+    J -->|Yes| M[Idempotency Check]
+    M -->|Duplicate| N[Skip Duplicate]
+    M -->|New Record| O[Accepted Storage]
+
+    O --> P[(PostgreSQL Warehouse)]
+    I --> Q[Review and Remediation]
+
+    P --> R[Analytics-Ready Facts and Dimensions]
 ```
 
-## Input Data
+## Batch Data Flow
 
-The system processes historical health indicators such as:
+Batch data starts from historical CSV files under:
 
-- Crude birth rate
-- Crude death rate
-- Life expectancy
-- Infant mortality
-- Under-five mortality
-- Maternal mortality
-- Undernourishment
-- Healthcare expenditure
+```text
+data/raw/
+```
 
-## Standard Data Format
+The pipeline:
 
-All datasets will be transformed into the following structure:
+1. Reads raw CSV files.
+2. Handles encoding differences.
+3. Standardizes column names.
+4. Standardizes country names.
+5. Converts years and values into valid formats.
+6. Handles sex-specific and sub-indicator fields.
+7. Validates required fields.
+8. Writes processed outputs.
 
-| Field | Description |
-|---|---|
-| country | ASEAN country name |
-| country_code | Standard country code |
-| year | Observation year |
-| indicator | Health indicator name |
-| value | Numeric indicator value |
-| unit | Measurement unit |
-| source | Dataset source |
-| processed_at | Processing timestamp |
+Batch outputs:
+
+```text
+data/processed/asean_health_indicators.csv
+data/processed/indicator_metadata.csv
+```
+
+## Streaming Data Flow
+
+Streaming data starts from simulated weather events.
+
+The demo writes generated input events to:
+
+```text
+data/streaming/weather_events.jsonl
+```
+
+Each event passes through:
+
+1. Schema validation.
+2. Duplicate detection.
+3. Simulated network failure handling.
+4. Retry logic.
+5. Accepted-event writing.
+6. DLQ routing for invalid or exhausted records.
+
+Streaming outputs:
+
+```text
+data/streaming/accepted_weather_events.jsonl
+data/streaming/weather_events_dlq.jsonl
+data/streaming/checkpoints.txt
+```
+
+## Warehouse Loading Flow
+
+Accepted streaming events can be loaded into PostgreSQL:
+
+```powershell
+docker compose up -d postgres
+py demo\run_streaming_demo.py --load-postgres
+```
+
+The loader writes to:
+
+- `dim_country`
+- `dim_source`
+- `dim_station`
+- `dim_date`
+- `dim_quality_status`
+- `fact_weather_observation`
+
+The fact table uses `event_id` as a unique key, so duplicate event loads are ignored.
 
 ## Data Quality Rules
 
-The pipeline checks for:
+The system checks for:
 
-- Missing country names
-- Invalid years
-- Non-numeric values
-- Duplicate observations
-- Unsupported ASEAN countries
-- Missing indicator names
-- Values outside realistic ranges
+- Missing countries.
+- Unsupported ASEAN countries.
+- Invalid years.
+- Non-numeric values.
+- Missing indicators.
+- Invalid weather event fields.
+- Duplicate event fingerprints.
+- Malformed records.
 
-## Output
+## Failure Handling
 
-The final output supports:
+| Failure Type | Handling |
+|---|---|
+| Invalid schema | Route to DLQ |
+| Temporary outage | Retry with backoff |
+| Retry exhausted | Route to DLQ |
+| Duplicate event | Skip using checkpoint or warehouse constraint |
+| Warehouse unavailable | Keep accepted JSONL output available for later sync |
 
-- Country comparison
-- Regional trend analysis
-- Machine-learning forecasting
-- API queries
-- Dashboard visualization
-- AI-generated recommendations
+## Trusted Data Boundary
+
+Only validated and accepted records should enter the trusted analytics layer.
+
+```text
+Raw input is not trusted.
+DLQ data is not trusted.
+Accepted storage and warehouse tables are trusted.
+```
+
+This separation is the governance foundation of Project RISING.
