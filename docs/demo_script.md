@@ -1,5 +1,7 @@
 # Project RISING Demo Script
 
+RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
+
 ## Opening
 
 Start with the problem, not the technology.
