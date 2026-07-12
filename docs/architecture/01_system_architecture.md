@@ -1,183 +1,177 @@
 # Project RISING System Architecture
 
-## Overview
+## Objective
 
-Project RISING is an AI-powered digital health intelligence platform designed
-to help ASEAN governments and public-health organizations analyze health
-indicators, detect inequalities, forecast future risks, and maintain healthcare
-operations during climate-related disruptions.
+Project RISING is a climate-resilient health data engineering platform.
 
-The MVP combines:
+Its core objective is to keep public-health data available and recoverable during climate-related disruption, including typhoons, flooding, power outages, rural network failures, and delayed connectivity.
 
-- Data engineering
-- Artificial intelligence
-- Machine learning
-- FastAPI
-- Dashboard visualization
-- Secure access controls
-- Climate-resilient edge architecture
+The system is designed around one principle:
+
+```text
+No critical health record should be lost during climate-induced connectivity failures.
+```
+
+## Architecture Summary
+
+Project RISING uses a hybrid ingestion architecture:
+
+- Batch ingestion for historical ASEAN health datasets.
+- Streaming ingestion for real-time climate or weather events.
+- Validation contracts to separate trusted and untrusted records.
+- Retry handling for temporary failures.
+- Idempotency and checkpoints to prevent duplicate processing.
+- Dead Letter Queue routing for malformed or permanently failed records.
+- PostgreSQL warehouse loading for accepted analytics-ready records.
 
 ## High-Level Architecture
 
 ```mermaid
 flowchart LR
-    A[ASEAN Health CSV Files] --> B[Python ETL Pipeline]
-    C[Climate and Weather Data] --> B
+    subgraph Sources
+        A[Historical ASEAN Health CSVs]
+        B[Real-Time Weather / Sensor Events]
+    end
 
-    B --> D[Data Validation and Cleaning]
-    D --> E[(Processed Data Store)]
-    E --> F[(PostgreSQL Database)]
+    subgraph Ingestion
+        C[Batch ETL Pipeline]
+        D[Streaming Producer]
+        E[Streaming Consumer]
+    end
 
-    F --> G[Analytics Engine]
-    F --> H[Machine Learning Engine]
+    subgraph Reliability
+        F[Schema Validation]
+        G[Retry Handler]
+        H[Idempotency Checkpoints]
+        I[Dead Letter Queue]
+    end
 
-    G --> I[FastAPI Backend]
-    H --> I
+    subgraph TrustedStorage
+        J[Processed Health Dataset]
+        K[Accepted Weather Events]
+        L[(PostgreSQL Warehouse)]
+    end
 
-    I --> J[AI Insight Generator]
-    I --> K[Streamlit Dashboard]
+    subgraph Governance
+        M[Data Contracts]
+        N[Quality Rules]
+        O[Lineage Docs]
+        P[Incident Response]
+    end
 
-    J --> K
-
-    K --> L[Public Health Analysts]
-    K --> M[Government Agencies]
-    K --> N[Regional Emergency Teams]
-
-    O[Offline Rural Health Node] --> P[Local Edge Storage]
-    P -->|Connection Restored| I
-
-    Q[Authentication and RBAC] --> I
-    R[Encryption and Audit Logging] --> I
+    A --> C --> F
+    B --> D --> E --> F
+    F -->|Valid| G --> H
+    F -->|Invalid| I
+    G -->|Temporary failure| G
+    G -->|Retry exhausted| I
+    H -->|New record| J
+    H -->|New event| K
+    H -->|Duplicate| K
+    J --> L
+    K --> L
+    M -.-> F
+    N -.-> F
+    O -.-> L
+    P -.-> I
 ```
 
-## Architecture Layers
+## System Layers
 
-### 1. Data Source Layer
+### 1. Source Layer
 
-The data-source layer includes:
+The source layer includes:
 
-- ASEAN historical health datasets
-- Climate datasets
-- Weather datasets
-- Population datasets
-- Future hospital and laboratory data
+- Historical ASEAN public-health CSV datasets.
+- Simulated real-time weather and climate events.
+- Future clinic, sensor, emergency-response, and public-health feeds.
 
-### 2. Data Engineering Layer
+### 2. Batch Pipeline Layer
 
-The ETL pipeline:
+The batch pipeline processes historical datasets by:
 
-- Extracts data from CSV files
-- Standardizes country names
-- Converts years and values into valid formats
-- Removes duplicate records
-- Handles missing values
-- Validates data quality
-- Produces analysis-ready datasets
+- Extracting CSV files.
+- Standardizing countries, indicators, years, and values.
+- Transforming wide datasets into analysis-ready long format.
+- Validating required fields and data quality rules.
+- Producing processed health indicators and metadata outputs.
 
-### 3. Storage Layer
+### 3. Streaming Pipeline Layer
 
-The MVP initially stores processed data as CSV or Parquet files.
+The streaming pipeline simulates real-time climate/weather events by:
 
-PostgreSQL will later provide:
+- Generating event records.
+- Validating event structure and values.
+- Routing malformed records to DLQ.
+- Simulating temporary network failure.
+- Retrying recoverable failures.
+- Writing accepted events and checkpoint fingerprints.
 
-- Structured storage
-- Fast analytical queries
-- API access
-- Country and indicator filtering
-- Historical trend storage
+### 4. Reliability Layer
 
-### 4. Analytics Layer
+This is the most important layer for the hackathon story.
 
-The analytics engine calculates:
+It provides:
 
-- Country comparisons
-- Regional averages
-- Health inequality gaps
-- Mortality trends
-- Life-expectancy trends
-- Vulnerability scores
+- Validation before records become trusted.
+- Retry logic for temporary failures.
+- Checkpoints for duplicate protection.
+- DLQ routing for failed records.
+- Warehouse uniqueness constraints for idempotent loading.
 
-### 5. Machine-Learning Layer
+### 5. Storage and Warehouse Layer
 
-The machine-learning engine will:
+The system stores:
 
-- Forecast health indicators
-- Detect abnormal trends
-- Estimate future mortality rates
-- Calculate health-risk levels
+- Processed batch health data in `data/processed/`.
+- Accepted streaming events in `data/streaming/accepted_weather_events.jsonl`.
+- Failed records in `data/streaming/weather_events_dlq.jsonl`.
+- Warehouse-ready facts and dimensions in PostgreSQL.
 
-### 6. API Layer
+### 6. Governance Layer
 
-FastAPI exposes processed health data and predictions through secure endpoints.
+The governance layer documents:
 
-Example endpoints:
-
-- `GET /`
-- `GET /health`
-- `GET /countries`
-- `GET /indicators`
-- `GET /trends`
-- `GET /predictions`
-
-### 7. AI Insight Layer
-
-The AI insight layer converts analytical findings into readable public-health
-recommendations.
-
-Example:
-
-> Infant mortality is declining in Country A, but the rate remains above the
-> ASEAN regional average. Continued investment in maternal and neonatal care
-> is recommended.
-
-### 8. Dashboard Layer
-
-The dashboard displays:
-
-- Regional health indicators
-- Country comparisons
-- Historical trends
-- Forecasts
-- Risk scores
-- AI-generated insights
-
-### 9. Security Layer
-
-The security layer includes:
-
-- Authentication
-- Role-based access control
-- Password hashing
-- Data encryption
-- Input validation
-- Audit logs
-- Environment-variable protection
-
-### 10. Climate-Resilient Edge Layer
-
-Rural healthcare facilities can continue working during:
-
-- Internet failures
-- Floods
-- Storms
-- Power outages
-- Infrastructure disruptions
-
-Data is stored locally and synchronized after connectivity returns.
+- Data contracts.
+- Data quality expectations.
+- Lineage.
+- Retention policy.
+- Incident response.
+- Service-level expectations.
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Programming | Python |
-| Data processing | Pandas and NumPy |
-| Machine learning | Scikit-learn |
-| Backend API | FastAPI |
-| API server | Uvicorn |
-| Database | PostgreSQL |
-| Dashboard | Streamlit |
-| Visualization | Plotly |
+| Batch processing | Pandas |
+| Validation | Pandera and custom validation |
+| Streaming simulation | JSONL producer and consumer |
+| Retry / DLQ | Python reliability handlers |
+| Warehouse | PostgreSQL |
+| Warehouse access | SQLAlchemy and psycopg2 |
+| Infrastructure demo | Docker Compose |
 | Testing | Pytest |
-| Version control | Git and GitHub |
-| Deployment | Docker and cloud hosting |
+| Documentation | Markdown and Mermaid |
 
+## MVP Scope
+
+The MVP intentionally focuses on resilience instead of too many technologies.
+
+In scope:
+
+- Batch ETL for historical health indicators.
+- Streaming resilience simulation.
+- Validation, retry, DLQ, and checkpoints.
+- PostgreSQL warehouse loading.
+- Tests and governance documentation.
+
+Out of scope for the MVP:
+
+- Full production Kafka deployment.
+- Kubernetes orchestration.
+- Patient-level records.
+- Real clinical system integration.
+- Production AI inference.
+
+These can be future extensions after the resilient data foundation is proven.

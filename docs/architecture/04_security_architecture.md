@@ -2,95 +2,118 @@
 
 ## Objective
 
-Project RISING uses a security-by-design approach to protect public-health data,
-API services, model outputs, and system access.
+Project RISING uses security-by-design principles to protect public-health data, pipeline credentials, warehouse access, and operational logs.
 
-## Security Architecture Diagram
+The MVP uses aggregated country-level public-health data and simulated weather events. It does not process patient-level personally identifiable information.
+
+Even so, the system is designed with future sensitive-health integration in mind.
+
+## Security Architecture
 
 ```mermaid
 flowchart TD
-    A[User] --> B[Authentication]
-    B --> C[JWT Access Token]
-    C --> D[Role-Based Access Control]
-    D --> E[FastAPI Endpoint]
-    E --> F[Input Validation]
-    F --> G[Authorized Data Query]
-    G --> H[(Database)]
+    A[Raw Batch and Stream Inputs] --> B[Validation Layer]
+    B --> C{Trusted?}
+    C -->|No| D[Dead Letter Queue]
+    C -->|Yes| E[Accepted Storage]
+    E --> F[(PostgreSQL Warehouse)]
 
-    I[Environment Variables] --> E
-    J[Audit Logs] --> E
-    K[Rate Limiting] --> E
-    L[Encryption] --> H
+    G[Environment Variables] --> H[Warehouse Connection]
+    H --> F
+
+    I[Data Contracts] -.-> B
+    J[Quality Rules] -.-> B
+    K[Audit and Lineage Docs] -.-> F
+    L[Incident Response] -.-> D
 ```
 
-## Security Controls
+## MVP Security Controls
 
-### Authentication
+### 1. Data Minimization
 
-Users must prove their identity before accessing protected endpoints.
+The MVP uses aggregated health indicators and simulated weather events.
 
-### Role-Based Access Control
+No patient names, addresses, IDs, phone numbers, or clinical records are required for the hackathon demo.
 
-Proposed roles:
+### 2. Input Validation
 
-| Role | Access |
-|---|---|
-| Regional administrator | ASEAN-wide aggregated information |
-| National health official | Authorized national information |
-| Health analyst | Analytics and predictions |
-| Clinic worker | Local data submission |
-| Public user | Public aggregated statistics |
+Records are validated before they become trusted data.
 
-### Password Security
+Invalid records are routed to DLQ instead of entering processed outputs or warehouse facts.
 
-Passwords must be:
+### 3. Dead Letter Queue Isolation
 
-- Hashed
-- Salted
-- Never stored as plain text
-
-### API Security
-
-The API will use:
-
-- JWT tokens
-- Request validation
-- Error handling
-- Rate limiting
-- Restricted endpoints
-
-### Encryption
-
-Data should be encrypted:
-
-- In transit using HTTPS
-- At rest in the database
-- During edge synchronization
-
-### Secrets Management
-
-Sensitive information should be stored in:
+Malformed or permanently failed records are isolated in:
 
 ```text
-.env
+data/streaming/weather_events_dlq.jsonl
 ```
 
-The `.env` file must not be pushed to GitHub.
+This protects the trusted analytics layer from corrupted records.
 
-### Audit Logging
+### 4. Idempotency and Duplicate Protection
 
-The system should record:
+The streaming pipeline uses checkpoints to avoid repeated processing.
 
-- Login attempts
-- Data modifications
-- API access
-- Administrative actions
-- Failed authorization attempts
+The PostgreSQL weather fact table also enforces uniqueness on `event_id`.
 
-## Data Privacy
+### 5. Secrets and Configuration
 
-The MVP uses aggregated country-level data and does not process personally
-identifiable patient information.
+Warehouse credentials should be managed through environment variables in production.
 
-Future versions should align with applicable ASEAN national privacy laws and
-regional data-sharing agreements.
+The demo uses local Docker credentials for reproducibility:
+
+```text
+rising_user / rising_password
+```
+
+Production deployments should use:
+
+```text
+DATABASE_URL
+.env
+secret manager
+```
+
+The `.env` file must not be committed.
+
+### 6. Warehouse Access Control
+
+Future warehouse access should separate:
+
+- Read-only analytics users.
+- Pipeline service accounts.
+- Administrative users.
+- Incident-response reviewers.
+
+### 7. Auditability
+
+The project includes governance documentation for:
+
+- Data contracts.
+- Data quality rules.
+- Data lineage.
+- Retention policy.
+- Incident response.
+- Uptime and SLOs.
+
+These documents make the system easier to operate and review.
+
+## Future Security Enhancements
+
+For production, Project RISING should add:
+
+- HTTPS for APIs.
+- Encrypted data at rest.
+- Encrypted edge synchronization.
+- Role-based access control.
+- Audit logs for pipeline loads.
+- Secret rotation.
+- Backup and restore policies.
+- Network restrictions for database access.
+
+## Privacy Position
+
+The MVP is safe for public demonstration because it uses aggregated datasets and simulated events.
+
+Future patient-level integrations would require stronger privacy controls, national regulatory review, consent and lawful-basis analysis, and stricter operational governance.
