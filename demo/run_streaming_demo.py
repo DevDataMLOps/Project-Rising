@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -17,6 +18,7 @@ from streaming.producer import (  # noqa: E402
     generate_weather_event,
     write_weather_events,
 )
+from warehouse.weather_loader import load_weather_events_jsonl  # noqa: E402
 
 
 STREAMING_DIR = PROJECT_ROOT / "data" / "streaming"
@@ -85,7 +87,7 @@ def build_bad_event() -> dict:
     return event
 
 
-def run_demo() -> None:
+def run_demo(load_postgres: bool = False) -> None:
     reset_demo_outputs()
 
     print_section("1. Generate weather events")
@@ -155,6 +157,26 @@ def run_demo() -> None:
     print(f"DLQ: {DLQ_PATH}")
     print(f"Checkpoints: {CHECKPOINT_PATH}")
 
+    if load_postgres:
+        print_section("7. Load accepted events to PostgreSQL warehouse")
+        warehouse_counts = load_weather_events_jsonl(
+            input_path=ACCEPTED_PATH,
+        )
+        print(warehouse_counts)
+
 
 if __name__ == "__main__":
-    run_demo()
+    parser = argparse.ArgumentParser(
+        description="Run the Project RISING streaming resilience demo."
+    )
+    parser.add_argument(
+        "--load-postgres",
+        action="store_true",
+        help=(
+            "Load accepted weather events into PostgreSQL. "
+            "Requires docker compose postgres to be running."
+        ),
+    )
+    args = parser.parse_args()
+
+    run_demo(load_postgres=args.load_postgres)

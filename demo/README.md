@@ -18,6 +18,35 @@ From the project root:
 py demo\run_streaming_demo.py
 ```
 
+To also load accepted events into PostgreSQL:
+
+```powershell
+docker compose up -d postgres
+py demo\run_streaming_demo.py --load-postgres
+```
+
+The demo uses this default warehouse connection:
+
+```text
+postgresql+psycopg2://rising_user:rising_password@127.0.0.1:55432/project_rising
+```
+
+To inspect the loaded warehouse rows:
+
+```powershell
+docker compose exec postgres psql -U rising_user -d project_rising -c "SELECT event_id, observed_at, temperature_c, humidity_pct, rainfall_mm FROM fact_weather_observation ORDER BY observed_at DESC LIMIT 10;"
+```
+
+If PostgreSQL rejects the password for `rising_user`, the local Docker volume was
+probably initialized with older credentials. For demo data, reset the volume and
+start Postgres again:
+
+```powershell
+docker compose down -v
+docker compose up -d postgres
+py demo\run_streaming_demo.py --load-postgres
+```
+
 ## Outputs
 
 The demo writes temporary local outputs under:
@@ -43,3 +72,4 @@ These outputs are ignored by Git because they are generated demo artifacts.
 4. Process a malformed event and show DLQ routing.
 5. Simulate network failure and show retry status.
 6. Restore normal operation and show successful recovery.
+7. Optionally load accepted events into `fact_weather_observation`.
