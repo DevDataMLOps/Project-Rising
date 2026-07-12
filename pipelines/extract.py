@@ -33,7 +33,16 @@ def extract_csv(file_path: str | Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Dataset not found: {path}")
 
-    dataframe = pd.read_csv(path)
+    try:
+        dataframe = pd.read_csv(
+            path,
+            encoding="utf-8-sig",
+        )
+    except UnicodeDecodeError:
+        dataframe = pd.read_csv(
+            path,
+            encoding="cp1252",
+        )
 
     if dataframe.empty:
         raise ValueError(f"Dataset is empty: {path.name}")

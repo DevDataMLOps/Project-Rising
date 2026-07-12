@@ -53,8 +53,20 @@ def validate_health_data(
             "Dataset contains missing values."
         )
 
+    duplicate_columns = [
+        "country",
+        "year",
+        "indicator",
+    ]
+
+    if "sex" in dataframe.columns:
+        duplicate_columns.append("sex")
+
+    if "sub_indicator" in dataframe.columns:
+        duplicate_columns.append("sub_indicator")
+
     duplicate_count = dataframe.duplicated(
-        subset=["country", "year", "indicator"]
+        subset=duplicate_columns
     ).sum()
 
     if duplicate_count > 0:
