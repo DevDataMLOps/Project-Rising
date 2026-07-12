@@ -69,6 +69,12 @@ Run the streaming resilience demo:
 py demo\run_streaming_demo.py
 ```
 
+Open the pipeline operations dashboard:
+
+```powershell
+streamlit run demo\pipeline_operations_dashboard.py
+```
+
 Run the streaming demo with PostgreSQL warehouse loading:
 
 ```powershell
@@ -108,7 +114,7 @@ Project RISING protects public-health data when climate disruption makes normal 
 - `warehouse/`: PostgreSQL loading utilities for accepted streaming events.
 - `schemas/`: data contracts for health and weather records.
 - `sql/`: warehouse dimension, fact, and metadata table definitions.
-- `demo/`: runnable streaming resilience demo.
+- `demo/`: runnable streaming resilience demo and operations dashboard.
 - `docs/architecture/`: system, data flow, AI, security, and climate-resilience architecture notes.
 - `docs/governance/`: data contracts, lineage, quality rules, retention, incident response, and SLOs.
 - `tests/`: automated tests for ingestion, transformation, validation, schema checks, retries, DLQ, deduplication, and warehouse loading helpers.

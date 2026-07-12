@@ -25,6 +25,12 @@ docker compose up -d postgres
 py demo\run_streaming_demo.py --load-postgres
 ```
 
+To open the operations dashboard:
+
+```powershell
+streamlit run demo\pipeline_operations_dashboard.py
+```
+
 The demo uses this default warehouse connection:
 
 ```text

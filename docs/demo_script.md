@@ -84,6 +84,19 @@ data/streaming/weather_events_dlq.jsonl
 data/streaming/checkpoints.txt
 ```
 
+Then open the operations dashboard:
+
+```powershell
+streamlit run demo\pipeline_operations_dashboard.py
+```
+
+Say:
+
+```text
+This operations dashboard is not a health dashboard.
+It shows the reliability proof points: accepted records, DLQ records, checkpoints, recovery after retry, and warehouse connectivity.
+```
+
 ## Demo Step 3: Warehouse Loading
 
 Run:
