@@ -13,3 +13,5 @@ passlib[bcrypt]
 pytest
 httpx
 joblib
+pandera
+kafka-python
