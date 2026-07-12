@@ -1,5 +1,7 @@
 # Project RISING Architecture Index
 
+RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
+
 Project RISING is documented as a climate-resilient health data engineering platform.
 
 The architecture is organized around the MVP goal:

@@ -1,5 +1,7 @@
 # Project RISING
 
+RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
+
 Project RISING is a climate-resilient health data engineering platform designed to keep public-health data moving during network failures, disasters, and infrastructure disruptions across ASEAN.
 
 The core promise is simple:

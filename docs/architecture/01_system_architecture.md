@@ -2,6 +2,8 @@
 
 ## Objective
 
+RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
+
 Project RISING is a climate-resilient health data engineering platform.
 
 Its core objective is to keep public-health data available and recoverable during climate-related disruption, including typhoons, flooding, power outages, rural network failures, and delayed connectivity.
