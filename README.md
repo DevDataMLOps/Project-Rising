@@ -69,6 +69,14 @@ flowchart LR
 
 Accepted records move into trusted storage and PostgreSQL warehouse tables. Failed or malformed records are isolated in a Dead Letter Queue for review. Duplicate events are protected by checkpoints and warehouse constraints.
 
+## Working Demonstration
+
+| Deployed FastAPI documentation | Pipeline operations dashboard |
+|---|---|
+| [![Project RISING Swagger API](docs/images/swagger-api.png)](https://project-rising-api.onrender.com/docs) | ![Project RISING pipeline operations dashboard](docs/images/operations-dashboard.png) |
+
+The operations screenshot shows the local resilience demo with the batch pipeline ready, streaming healthy, zero data loss, DLQ isolation, checkpointing, and retry recovery. PostgreSQL synchronization is optional in this local view and can be enabled with Docker Compose.
+
 ## What This Proves
 
 - Historical ASEAN health CSV files can be processed through a governed batch ETL pipeline.
