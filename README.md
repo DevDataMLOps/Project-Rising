@@ -12,7 +12,7 @@ No critical health record should be lost during climate-induced connectivity fai
 
 Instead of focusing only on prediction or dashboards, Project RISING focuses on the reliability layer that public-health systems need before analytics can be trusted: batch ingestion, real-time event processing, validation, retries, idempotency, dead-letter handling, and warehouse synchronization.
 
-## MVP Implementation Status
+## Minimum Viable Product (MVP) Implementation Status
 
 This repository separates working MVP capabilities from simulated inputs and future production features. The country risk endpoint is a transparent comparative demonstration score, not an AI prediction.
 
