@@ -72,7 +72,13 @@ py demo\run_streaming_demo.py
 Open the pipeline operations dashboard:
 
 ```powershell
-streamlit run demo\pipeline_operations_dashboard.py
+py -m streamlit run demo\pipeline_operations_dashboard.py
+```
+
+If Streamlit is not installed yet, install the project dependencies first:
+
+```powershell
+py -m pip install -r requirements.txt
 ```
 
 Run the streaming demo with PostgreSQL warehouse loading:

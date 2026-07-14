@@ -87,7 +87,13 @@ data/streaming/checkpoints.txt
 Then open the operations dashboard:
 
 ```powershell
-streamlit run demo\pipeline_operations_dashboard.py
+py -m streamlit run demo\pipeline_operations_dashboard.py
+```
+
+If Streamlit is not installed yet:
+
+```powershell
+py -m pip install -r requirements.txt
 ```
 
 Say:
