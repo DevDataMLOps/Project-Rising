@@ -43,6 +43,35 @@ def count_lines(path: Path) -> int:
     return len([line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()])
 
 
+def demo_outputs_exist() -> bool:
+    required_paths = [
+        INPUT_PATH,
+        ACCEPTED_PATH,
+        DLQ_PATH,
+        CHECKPOINT_PATH,
+    ]
+
+    return all(path.exists() and count_lines(path) > 0 for path in required_paths)
+
+
+def ensure_demo_outputs() -> tuple[bool, str | None]:
+    """
+    Streamlit Cloud deploys without generated local files because data/streaming
+    is ignored by Git. Generate the non-Postgres demo outputs on first load.
+    """
+    if demo_outputs_exist():
+        return False, None
+
+    try:
+        from demo.run_streaming_demo import run_demo  # noqa: WPS433
+
+        run_demo(load_postgres=False)
+    except Exception as error:  # pragma: no cover - displayed in Streamlit UI
+        return False, str(error)
+
+    return True, None
+
+
 def read_text_file(path: Path) -> str:
     if not path.exists():
         return ""
@@ -127,6 +156,15 @@ def main() -> None:
         retry recovery, and warehouse synchronization.
         """
     )
+
+    generated_demo_outputs, demo_generation_error = ensure_demo_outputs()
+    if generated_demo_outputs:
+        st.success("Generated streaming demo outputs for this dashboard session.")
+    elif demo_generation_error:
+        st.error(
+            "Could not generate streaming demo outputs automatically: "
+            f"{demo_generation_error}"
+        )
 
     input_events = read_jsonl(INPUT_PATH)
     accepted_events = read_jsonl(ACCEPTED_PATH)
