@@ -199,8 +199,9 @@ def main() -> None:
         st.metric("Warehouse Weather Facts", warehouse_count)
     else:
         st.info(
-            "Warehouse is not connected. Start PostgreSQL with "
-            "`docker compose up -d postgres` to show warehouse counts."
+            "Warehouse sync is optional in this hosted view. The Streamlit app "
+            "shows the local resilience proof from generated demo files; run "
+            "`docker compose up -d postgres` locally to enable warehouse counts."
         )
 
     st.subheader("Demo Outputs")
