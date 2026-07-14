@@ -12,6 +12,27 @@ No critical health record should be lost during climate-induced connectivity fai
 
 Instead of focusing only on prediction or dashboards, Project RISING focuses on the reliability layer that public-health systems need before analytics can be trusted: batch ingestion, real-time event processing, validation, retries, idempotency, dead-letter handling, and warehouse synchronization.
 
+## MVP Implementation Status
+
+This repository separates working MVP capabilities from simulated inputs and future production features. The country risk endpoint is a transparent comparative demonstration score, not an AI prediction.
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Historical health-data ETL | Implemented | [`pipelines/`](pipelines/) |
+| Schema and data-quality validation | Implemented | [`schemas/`](schemas/) and [`pipelines/validation/`](pipelines/validation/) |
+| Climate-event streaming | Simulated | [`streaming/`](streaming/) and [`demo/run_streaming_demo.py`](demo/run_streaming_demo.py) |
+| Retry and outage recovery | Implemented | [`streaming/retry_handler.py`](streaming/retry_handler.py) and [`demo/`](demo/) |
+| Dead Letter Queue routing | Implemented | [`streaming/dlq_handler.py`](streaming/dlq_handler.py) |
+| Duplicate protection and checkpoints | Implemented | [`streaming/consumer.py`](streaming/consumer.py) and warehouse constraints |
+| PostgreSQL warehouse loading | Implemented | [`warehouse/`](warehouse/) and [`sql/`](sql/) |
+| Pipeline operations dashboard | Implemented | [`demo/pipeline_operations_dashboard.py`](demo/pipeline_operations_dashboard.py) |
+| Public-health and pipeline API | Implemented MVP | [`api/routes/`](api/routes/) and [`main.py`](main.py) |
+| Country comparative risk score | Implemented demo (not AI) | [`api/routes/risk.py`](api/routes/risk.py) |
+| Automated test workflow | Implemented | [`.github/workflows/tests.yml`](.github/workflows/tests.yml) |
+| Live weather-provider integration | Designed | Future production integration |
+| Outbreak prediction model | Planned | [`docs/architecture/03_ai_architecture.md`](docs/architecture/03_ai_architecture.md) |
+| Patient-level clinical integration | Out of scope for MVP | Future production phase with additional privacy and security controls |
+
 ## Problem
 
 Climate events such as typhoons, floods, heatwaves, and rural infrastructure outages can delay or interrupt healthcare data collection. When connectivity fails, critical records may arrive late, duplicate, become malformed, or disappear before analysts and decision-makers can act.
