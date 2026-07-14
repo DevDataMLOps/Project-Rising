@@ -43,27 +43,28 @@ Project RISING addresses this by treating disruption as an expected condition, n
 
 Project RISING combines historical batch health data with simulated real-time climate/weather events in a resilient hybrid pipeline.
 
-```text
-CSV Batch Data
-       \
-        \
-Weather Stream
-        |
-        v
-Validation Layer
-        |
-        v
-Retry Mechanism
-        |
-        v
-Idempotency / Checkpoints
-        |
-   +----+----+
-   |         |
-Success   Failure
-   |         |
-   v         v
-Warehouse   DLQ
+```mermaid
+flowchart LR
+    subgraph Sources
+        A["Historical ASEAN health CSVs"]
+        B["Simulated climate and weather events"]
+    end
+
+    A --> C["Batch ETL"]
+    C --> D["Health schema and quality validation"]
+    D --> E["Processed health data"]
+
+    B --> F["Streaming producer and consumer"]
+    F --> G["Weather schema validation"]
+    G --> H["Retry, deduplication, and checkpoints"]
+    H -->|Accepted| I["Accepted event storage"]
+    H -->|Malformed| J["Dead Letter Queue"]
+
+    I --> K["Optional PostgreSQL warehouse"]
+    E --> L["FastAPI public-health endpoints"]
+    I --> L
+    I --> M["Operations dashboard"]
+    J --> M
 ```
 
 Accepted records move into trusted storage and PostgreSQL warehouse tables. Failed or malformed records are isolated in a Dead Letter Queue for review. Duplicate events are protected by checkpoints and warehouse constraints.
@@ -126,6 +127,26 @@ py -m pytest
 Imagine a typhoon disrupts connectivity in the Philippines.
 
 Project RISING receives health and climate-related events while the network is unstable. One record is malformed and is routed to the DLQ. Another record fails during the simulated outage and is marked for retry. When connectivity is restored, the event is recovered and written to accepted storage. Accepted events can then be synchronized into PostgreSQL for analytics.
+
+```mermaid
+sequenceDiagram
+    participant Source as Clinic or event source
+    participant Pipeline as Project RISING pipeline
+    participant Retry as Retry handler
+    participant DLQ as Dead Letter Queue
+    participant Storage as Trusted storage
+
+    Source->>Pipeline: Send health or climate event
+    alt Valid record and connectivity available
+        Pipeline->>Storage: Validate, deduplicate, and store
+    else Temporary connectivity failure
+        Pipeline->>Retry: Preserve event for retry
+        Retry-->>Pipeline: Replay after connectivity returns
+        Pipeline->>Storage: Store exactly once
+    else Malformed record
+        Pipeline->>DLQ: Isolate with error context
+    end
+```
 
 The message for judges:
 
