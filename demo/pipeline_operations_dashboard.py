@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from threading import Lock
 
 import pandas as pd
 import plotly.express as px
@@ -22,6 +23,7 @@ INPUT_PATH = STREAMING_DIR / "weather_events.jsonl"
 ACCEPTED_PATH = STREAMING_DIR / "accepted_weather_events.jsonl"
 DLQ_PATH = STREAMING_DIR / "weather_events_dlq.jsonl"
 CHECKPOINT_PATH = STREAMING_DIR / "checkpoints.txt"
+DEMO_GENERATION_LOCK = Lock()
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -30,8 +32,17 @@ def read_jsonl(path: Path) -> list[dict]:
 
     records = []
     for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            records.append(json.loads(line))
+        if not line.strip():
+            continue
+
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            # A partially written record must not take down the operations UI.
+            continue
+
+        if isinstance(record, dict):
+            records.append(record)
 
     return records
 
@@ -44,14 +55,17 @@ def count_lines(path: Path) -> int:
 
 
 def demo_outputs_exist() -> bool:
-    required_paths = [
+    jsonl_paths = [
         INPUT_PATH,
         ACCEPTED_PATH,
         DLQ_PATH,
-        CHECKPOINT_PATH,
     ]
 
-    return all(path.exists() and count_lines(path) > 0 for path in required_paths)
+    return (
+        all(path.exists() and len(read_jsonl(path)) > 0 for path in jsonl_paths)
+        and CHECKPOINT_PATH.exists()
+        and count_lines(CHECKPOINT_PATH) > 0
+    )
 
 
 def ensure_demo_outputs() -> tuple[bool, str | None]:
@@ -59,17 +73,21 @@ def ensure_demo_outputs() -> tuple[bool, str | None]:
     Streamlit Cloud deploys without generated local files because data/streaming
     is ignored by Git. Generate the non-Postgres demo outputs on first load.
     """
-    if demo_outputs_exist():
-        return False, None
+    with DEMO_GENERATION_LOCK:
+        if demo_outputs_exist():
+            return False, None
 
-    try:
-        from demo.run_streaming_demo import run_demo  # noqa: WPS433
+        try:
+            from demo.run_streaming_demo import run_demo  # noqa: WPS433
 
-        run_demo(load_postgres=False)
-    except Exception as error:  # pragma: no cover - displayed in Streamlit UI
-        return False, str(error)
+            run_demo(load_postgres=False)
+        except Exception as error:  # pragma: no cover - displayed in Streamlit UI
+            return False, str(error)
 
-    return True, None
+        if not demo_outputs_exist():
+            return False, "Demo output generation produced incomplete files."
+
+        return True, None
 
 
 def read_text_file(path: Path) -> str:
