@@ -79,7 +79,7 @@ Accepted records move into trusted storage and PostgreSQL warehouse tables. Fail
 
 | Deployed FastAPI documentation | Pipeline operations dashboard |
 |---|---|
-| [![Project RISING Swagger API](docs/images/swagger-api.png)](https://project-rising.onrender.com) | ![Project RISING pipeline operations dashboard](docs/images/operations-dashboard.png) |
+| [![Project RISING Swagger API](docs/images/swagger-api.png)](https://project-rising.onrender.com/docs) | ![Project RISING pipeline operations dashboard](docs/images/operations-dashboard.png) |
 
 The operations screenshot shows the local resilience demo with the batch pipeline ready, streaming healthy, zero data loss, DLQ isolation, checkpointing, and retry recovery. PostgreSQL synchronization is optional in this local view and can be enabled with Docker Compose.
 
