@@ -1,5 +1,11 @@
 # Project RISING
 
+**Resilient public-health data when climate disruption breaks normal infrastructure.**
+
+[![Project RISING Tests](https://github.com/DevDataMLOps/Project-Rising/actions/workflows/tests.yml/badge.svg)](https://github.com/DevDataMLOps/Project-Rising/actions/workflows/tests.yml) ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white) ![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+[**Live API**](https://project-rising-api.onrender.com/) · [**Interactive API Docs**](https://project-rising-api.onrender.com/docs) · [**Hackathon Submission & Vote**](https://www.10alytics.io/hackathon/projects/23) · [**Source Code**](https://github.com/DevDataMLOps/Project-Rising) · [**Run Dashboard Locally**](#demo-commands)
+
 RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
 
 Project RISING is a climate-resilient health data engineering platform designed to keep public-health data moving during network failures, disasters, and infrastructure disruptions across ASEAN.
