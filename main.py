@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes.climate import router as climate_router
 from api.routes.health import router as health_router
 from api.routes.pipeline import router as pipeline_router
+from api.routes.prediction import router as prediction_router
 from api.routes.risk import router as risk_router
 
 
@@ -40,6 +41,11 @@ app.include_router(
 
 app.include_router(
     risk_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    prediction_router,
     prefix="/api/v1",
 )
 

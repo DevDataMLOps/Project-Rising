@@ -116,3 +116,49 @@ def test_country_risk() -> None:
     }
     assert body["indicators_used"] > 0
     assert body["is_ai_prediction"] is False
+
+
+def test_disease_risk_prediction() -> None:
+    response = client.post(
+        "/api/v1/disease-risk/predict",
+        json={
+            "country": "Philippines",
+            "disease": "dengue",
+            "temperature_c": 29.0,
+            "rainfall_mm": 180.0,
+            "humidity_pct": 85.0,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["country"] == "Philippines"
+    assert body["disease"] == "Dengue"
+    assert body["forecast_window"] == "next 14 days"
+    assert 0 <= body["risk_probability"] <= 1
+    assert body["risk_level"] in {"low", "moderate", "high"}
+    assert body["model"]["version"] == "1.0.0"
+    assert len(body["health_evidence"]) > 0
+    assert len(body["recommendations"]) == 2
+
+
+def test_disease_risk_sample_is_real_output() -> None:
+    response = client.get("/api/v1/disease-risk/sample")
+
+    assert response.status_code == 200
+    assert response.json()["risk_score"] > 0
+
+
+def test_disease_risk_rejects_invalid_weather_input() -> None:
+    response = client.post(
+        "/api/v1/disease-risk/predict",
+        json={
+            "country": "Philippines",
+            "disease": "dengue",
+            "temperature_c": 29.0,
+            "rainfall_mm": -1,
+            "humidity_pct": 85.0,
+        },
+    )
+
+    assert response.status_code == 422

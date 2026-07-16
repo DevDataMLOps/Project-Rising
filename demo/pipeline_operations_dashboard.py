@@ -16,6 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from warehouse.db import get_engine  # noqa: E402
+from api.services.data_service import get_countries  # noqa: E402
+from api.services.disease_risk_service import predict_disease_risk  # noqa: E402
 
 
 STREAMING_DIR = PROJECT_ROOT / "data" / "streaming"
@@ -143,7 +145,7 @@ def show_event_table(events: list[dict], empty_message: str) -> None:
     if dataframe.empty:
         st.warning(empty_message)
     else:
-        st.dataframe(dataframe, use_container_width=True)
+        st.dataframe(dataframe, width="stretch")
 
 
 def show_raw_output(path: Path, language: str = "json") -> None:
@@ -153,6 +155,77 @@ def show_raw_output(path: Path, language: str = "json") -> None:
         return
 
     st.code(contents, language=language)
+
+
+def render_disease_risk_panel() -> None:
+    st.header("Climate-Health Decision Support")
+    st.caption(
+        "Explore a transparent 14-day mosquito-borne disease-risk estimate "
+        "using repository health indicators and a weather scenario."
+    )
+
+    with st.form("disease-risk-form"):
+        countries = get_countries()
+        default_country = countries.index("Philippines") if "Philippines" in countries else 0
+        input_cols = st.columns(5)
+        country = input_cols[0].selectbox(
+            "Country",
+            countries,
+            index=default_country,
+        )
+        disease = input_cols[1].selectbox(
+            "Disease",
+            ["dengue", "malaria", "mosquito_borne"],
+        )
+        temperature_c = input_cols[2].number_input(
+            "Temperature (C)", min_value=-10.0, max_value=55.0, value=29.0
+        )
+        rainfall_mm = input_cols[3].number_input(
+            "Rainfall (mm)", min_value=0.0, max_value=2000.0, value=180.0
+        )
+        humidity_pct = input_cols[4].slider(
+            "Humidity (%)", min_value=0, max_value=100, value=85
+        )
+        submitted = st.form_submit_button("Calculate disease risk", type="primary")
+
+    if submitted or "disease_risk_prediction" not in st.session_state:
+        st.session_state["disease_risk_prediction"] = predict_disease_risk(
+            country=country,
+            disease=disease,
+            temperature_c=temperature_c,
+            rainfall_mm=rainfall_mm,
+            humidity_pct=float(humidity_pct),
+        )
+
+    prediction = st.session_state["disease_risk_prediction"]
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Risk Score", f"{prediction['risk_score']}/100")
+    metric_cols[1].metric("Risk Level", prediction["risk_level"].title())
+    metric_cols[2].metric(
+        "Climate Suitability",
+        f"{prediction['score_breakdown']['climate_suitability']}%",
+    )
+    metric_cols[3].metric(
+        "Health Vulnerability",
+        f"{prediction['score_breakdown']['historical_health_vulnerability']}%",
+    )
+
+    evidence_col, action_col = st.columns([3, 2])
+    with evidence_col:
+        st.write("Historical health evidence")
+        st.dataframe(
+            pd.DataFrame(prediction["health_evidence"]),
+            width="stretch",
+            hide_index=True,
+        )
+    with action_col:
+        st.write("Recommended actions")
+        for recommendation in prediction["recommendations"]:
+            st.markdown(f"- {recommendation}")
+
+    st.info(prediction["disclaimer"])
+    with st.expander("View API-ready prediction JSON"):
+        st.json(prediction)
 
 
 def main() -> None:
@@ -174,6 +247,9 @@ def main() -> None:
         retry recovery, and warehouse synchronization.
         """
     )
+
+    render_disease_risk_panel()
+    st.divider()
 
     generated_demo_outputs, demo_generation_error = ensure_demo_outputs()
     if generated_demo_outputs:
@@ -232,7 +308,7 @@ def main() -> None:
             file_status(CHECKPOINT_PATH),
         ]
     )
-    st.dataframe(output_files, use_container_width=True, hide_index=True)
+    st.dataframe(output_files, width="stretch", hide_index=True)
 
     st.subheader("Record Routing")
 
@@ -256,7 +332,7 @@ def main() -> None:
         title="Pipeline record movement",
     )
     chart.update_layout(showlegend=False)
-    st.plotly_chart(chart, use_container_width=True)
+    st.plotly_chart(chart, width="stretch")
 
     tab_generated, tab_accepted, tab_dlq, tab_checkpoints, tab_raw, tab_demo = st.tabs(
         [
@@ -297,7 +373,7 @@ def main() -> None:
                 for line in CHECKPOINT_PATH.read_text(encoding="utf-8").splitlines()
                 if line.strip()
             ]
-            st.dataframe(pd.DataFrame(checkpoints), use_container_width=True)
+            st.dataframe(pd.DataFrame(checkpoints), width="stretch")
 
     with tab_raw:
         st.write("Raw contents of the files produced by the streaming demo.")
