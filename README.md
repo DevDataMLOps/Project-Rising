@@ -219,18 +219,6 @@ Project-Rising/
 | UN SDG alignment | SDG 3, 9, 13, and 17 | Aligned |
 | Public deployment | [API](https://project-rising-api.onrender.com/) and [Streamlit dashboard](https://project-rising.streamlit.app/) | Implemented |
 
-## Team Roles
-
-Replace names before submission; one person may cover multiple roles.
-
-| Role | Name | Responsibility |
-|---|---|---|
-| Product / public-health lead | `TBD` | Problem framing, impact, requirements |
-| Data engineering lead | `TBD` | ETL, streaming resilience, warehouse |
-| API / ML lead | `TBD` | FastAPI, risk model, tests |
-| Frontend / demo lead | `TBD` | Streamlit dashboard, storytelling, video |
-| Security / governance lead | `TBD` | Data contracts, controls, incident response |
-
 ## Documentation
 
 - [System architecture](docs/architecture/01_system_architecture.md)
