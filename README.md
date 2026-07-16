@@ -203,13 +203,13 @@ Project-Rising/
 └── docker-compose.yml   Local PostgreSQL service
 ```
 
-## Hackathon Requirement Mapping
+## Minimum Viable Product (MVP): Capability Features
 
 | Requirement | Implementation evidence | Status |
 |---|---|---|
 | ADHCRI / climate-resilient healthcare | Resilient hybrid pipeline, retries, DLQ, checkpoints | Implemented |
-| Health and climate data integration | Processed ASEAN indicators plus climate-event scenarios | Implemented Minimum Viable Product (MVP) |
-| AI / intelligent decision support | Explainable disease-risk endpoint and interactive controls | Implemented MVP |
+| Health and climate data integration | Processed ASEAN indicators plus climate-event scenarios | Implemented |
+| AI / intelligent decision support | Explainable disease-risk endpoint and interactive controls | Implemented |
 | Working backend | FastAPI app and Swagger/OpenAPI docs | Implemented |
 | Data engineering / ETL | Batch pipeline, schema validation, metadata, warehouse loading | Implemented |
 | Interactive presentation | Streamlit decision-support and operations dashboard | Implemented |
@@ -228,7 +228,7 @@ Project-Rising/
 - [Climate-resilience architecture](docs/architecture/05_climate_resilience.md)
 - [Original resilience demo guide](docs/demo_script.md)
 
-## Responsible Use and Minimum Viable Product (MVP) Boundaries
+## Responsible Use and MVP Boundaries
 
 - The model uses aggregated public-health data and user-supplied weather conditions.
 - It provides an explainable preparedness signal, not patient-level advice.
