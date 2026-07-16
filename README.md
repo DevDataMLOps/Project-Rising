@@ -8,9 +8,8 @@
 ![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-[Live API](https://project-rising-api.onrender.com/) · [Interactive API Docs](https://project-rising-api.onrender.com/docs) · [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) · [Source Code](https://github.com/DevDataMLOps/Project-Rising)
+[Live Dashboard](https://project-rising.streamlit.app/) · [Live API](https://project-rising-api.onrender.com/) · [Interactive API Docs](https://project-rising-api.onrender.com/docs) · [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) · [Source Code](https://github.com/DevDataMLOps/Project-Rising)
 
-> **Dashboard deployment:** add the public Streamlit URL here after deployment.
 > **Demo video:** add the 3–5 minute video URL here after recording.
 
 RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**. It combines governed ASEAN health data, resilient climate-event processing, an explainable disease-risk model, FastAPI endpoints, and an interactive Streamlit decision-support dashboard.
@@ -220,7 +219,7 @@ Project-Rising/
 | Reliability and cybersecurity | Validation, isolation, idempotency, security architecture | Implemented/design documented |
 | Testing and reproducibility | pytest suite and GitHub Actions | Implemented |
 | UN SDG alignment | SDG 3, 9, 13, and 17 | Aligned |
-| Public deployment | API deployed; dashboard URL pending | Partial |
+| Public deployment | [API](https://project-rising-api.onrender.com/) and [Streamlit dashboard](https://project-rising.streamlit.app/) | Implemented |
 | Demo video | Timed script and checklist ready; recording pending | Ready to record |
 
 ## Team Roles
