@@ -10,8 +10,6 @@
 
 [Live Dashboard](https://project-rising.streamlit.app/) · [Live API](https://project-rising-api.onrender.com/) · [Interactive API Docs](https://project-rising-api.onrender.com/docs) · [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) · [Source Code](https://github.com/DevDataMLOps/Project-Rising)
 
-> **Demo video:** add the 3–5 minute video URL here after recording.
-
 RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**. It combines governed ASEAN health data, resilient climate-event processing, an explainable disease-risk model, FastAPI endpoints, and an interactive Streamlit decision-support dashboard.
 
 ## Judge Quick Start
@@ -220,7 +218,6 @@ Project-Rising/
 | Testing and reproducibility | pytest suite and GitHub Actions | Implemented |
 | UN SDG alignment | SDG 3, 9, 13, and 17 | Aligned |
 | Public deployment | [API](https://project-rising-api.onrender.com/) and [Streamlit dashboard](https://project-rising.streamlit.app/) | Implemented |
-| Demo video | Timed script and checklist ready; recording pending | Ready to record |
 
 ## Team Roles
 
@@ -241,8 +238,7 @@ Replace names before submission; one person may cover multiple roles.
 - [AI and decision-support architecture](docs/architecture/03_ai_architecture.md)
 - [Security architecture](docs/architecture/04_security_architecture.md)
 - [Climate-resilience architecture](docs/architecture/05_climate_resilience.md)
-- [3–5 minute demo script](docs/demo_script.md)
-- [Demo checklist](docs/demo_checklist.md)
+- [Original resilience demo guide](docs/demo_script.md)
 
 ## Responsible Use and MVP Boundaries
 
