@@ -228,7 +228,7 @@ Project-Rising/
 - [Climate-resilience architecture](docs/architecture/05_climate_resilience.md)
 - [Original resilience demo guide](docs/demo_script.md)
 
-## Responsible Use and MVP Boundaries
+## Responsible Use and MVP Proficiency
 
 - The model uses aggregated public-health data and user-supplied weather conditions.
 - It provides an explainable preparedness signal, not patient-level advice.
