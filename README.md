@@ -12,7 +12,7 @@
 
 RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**. It combines governed ASEAN health data, resilient climate-event processing, an explainable disease-risk model, FastAPI endpoints, and an interactive Streamlit decision-support dashboard.
 
-## Judge Quick Start
+## Quick Start
 
 From a fresh clone with Python 3.11+:
 
