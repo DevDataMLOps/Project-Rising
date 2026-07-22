@@ -21,8 +21,6 @@ from api.routers.monitoring import router as monitoring_router
 from api.routes.operations import router as operations_router
 
 
-from api.routers.ml import router as ml_router
-
 app = FastAPI(
     title="Project RISING",
     description=(
@@ -91,9 +89,6 @@ app.include_router(operations_router)
 # -------------------------------------------------------------------
 # System endpoints
 # -------------------------------------------------------------------
-
-# Phase 4B trained ML endpoints
-app.include_router(ml_router)
 
 @app.get("/", tags=["System"])
 def root() -> dict[str, str]:

@@ -1,0 +1,13 @@
+Project RISING Phase 4B validation targets
+
+- Versioned Random Forest forecasting artifact
+- Time-based holdout evaluation: MAE, RMSE, R2
+- Global feature importance
+- Versioned Isolation Forest anomaly artifact
+- Unsupervised score calibration and review evidence
+- Registry and training report JSON
+- Dataset SHA-256 lineage
+- Drift monitoring endpoint
+- Retraining command
+- Responsible-use disclaimers
+- Five focused Phase 4B tests
