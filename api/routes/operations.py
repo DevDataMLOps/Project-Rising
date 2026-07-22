@@ -18,7 +18,7 @@ from api.services.forecast_service import forecast_health_indicator
 from api.services.incident_store import list_alerts
 
 
-router = APIRouter(prefix="/operations", tags=["Phase 4 Operations Intelligence"])
+router = APIRouter(prefix="/operations", tags=["Operations Intelligence"])
 
 
 @router.post("/events", status_code=201)
@@ -112,7 +112,7 @@ def health_indicator_forecast(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@router.get("/readiness")
+@router.get("/readiness", summary="Operations Readiness")
 def phase4_readiness() -> dict[str, Any]:
     """Report which Phase 4 capabilities are available."""
 

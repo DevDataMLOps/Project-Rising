@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from api.ml_schemas import MLAnomalyRequest, MLForecastRequest
 from api.services.ml_service import MLService
 
-router = APIRouter(prefix="/api/v1/ml", tags=["Phase 4B AI & Machine Learning"])
+router = APIRouter(prefix="/api/v1/ml", tags=["AI & Machine Learning"])
 
 
 def _service() -> MLService:
