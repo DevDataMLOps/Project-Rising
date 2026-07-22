@@ -1,0 +1,85 @@
+[
+  {
+    "acknowledgement": {
+      "acknowledged_at": "2026-07-21T23:07:38.442428+00:00",
+      "note": "Incident reviewed. Investigating failed records and validating the latest pipeline checkpoint.",
+      "owner": "public-health-operations"
+    },
+    "category": "pipeline_failure",
+    "country": "Philippines",
+    "created_at": "2026-07-21T22:58:14.821744+00:00",
+    "dedup_key": "d9ed1f3eedd22f568d14",
+    "id": "9c9c4620-a5fa-4862-8c7a-5ba621741a41",
+    "last_seen_at": "2026-07-21T22:56:14.438000+00:00",
+    "message": "Health-data transformation pipeline failed after three retry attempts.",
+    "metadata": {
+      "dataset": "undernourishment_rate.csv",
+      "environment": "development",
+      "pipeline": "asean_health_etl",
+      "retry_count": 3
+    },
+    "metric": "failed_records",
+    "observed_value": 145.0,
+    "occurrences": 3,
+    "recommended_actions": [
+      "Retry from the last successful checkpoint.",
+      "Route malformed records to the dead-letter queue instead of blocking the batch.",
+      "Validate source availability, schema version, and warehouse connectivity."
+    ],
+    "recovery_plan": {
+      "automatic_execution_enabled": false,
+      "mode": "human-approved guided recovery",
+      "steps": [
+        "Retry from the last successful checkpoint.",
+        "Route malformed records to the dead-letter queue instead of blocking the batch.",
+        "Validate source availability, schema version, and warehouse connectivity."
+      ]
+    },
+    "root_cause": {
+      "analysis_type": "explainable rule-based root-cause analysis",
+      "corrective_actions": [
+        "Retry from the last successful checkpoint.",
+        "Route malformed records to the dead-letter queue instead of blocking the batch.",
+        "Validate source availability, schema version, and warehouse connectivity."
+      ],
+      "evidence": [
+        "Source: pipelines.transform",
+        "Signal: Health-data transformation pipeline failed after three retry attempts.",
+        "Country: Philippines",
+        "Metric: failed_records",
+        "Observed value: 145.0",
+        "Threshold: 25.0",
+        "Retry count: 3"
+      ],
+      "human_verification_required": true,
+      "prevention_actions": [
+        "Add freshness and schema-contract checks before transformation.",
+        "Track retry count, DLQ volume, and checkpoint age as alertable metrics."
+      ],
+      "probable_causes": [
+        {
+          "cause": "Source data is missing, late, or inaccessible",
+          "confidence": 0.82,
+          "rank": 1
+        },
+        {
+          "cause": "Schema drift caused validation or transformation failure",
+          "confidence": 0.74,
+          "rank": 2
+        },
+        {
+          "cause": "A downstream warehouse or storage dependency is unavailable",
+          "confidence": 0.61,
+          "rank": 3
+        }
+      ],
+      "summary": "Pipeline delivery failure"
+    },
+    "severity": "critical",
+    "source": "pipelines.transform",
+    "status": "acknowledged",
+    "threshold": 25.0,
+    "title": "Pipeline delivery failure: Philippines",
+    "updated_at": "2026-07-21T23:07:38.442428+00:00"
+  }
+]
