@@ -2,7 +2,7 @@
 # see .env.example. This file is documentation, not a second config source.
 application:
   name: Project RISING API
-  version: 2.0.0
+  version: 4.0.0
   environment: development
 observability:
   log_level: INFO
@@ -12,3 +12,4 @@ limits:
   max_request_body_bytes: 1048576
 persistence:
   database_required: false
+

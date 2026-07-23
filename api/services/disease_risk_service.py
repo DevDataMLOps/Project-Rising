@@ -1,196 +1,118 @@
 from __future__ import annotations
 
-import csv
-from pathlib import Path
 from typing import Any
 
+from api.repositories.health_repository import HealthRepository, repository
+from api.services.risk_service import country_risk_score
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-HEALTH_DATASET = (
-    PROJECT_ROOT / "data" / "processed" / "asean_health_indicators.csv"
-)
-
-SUPPORTED_DISEASES = {
-    "dengue": "Dengue",
-    "malaria": "Malaria",
-    "mosquito_borne": "Mosquito-borne disease",
-}
-
-HEALTH_INDICATOR_WEIGHTS = {
-    "malaria_prevalence": 0.7,
-    "infant_mortality_rate": 0.3,
-}
+SUPPORTED_DISEASES = {"dengue": "Dengue", "malaria": "Malaria"}
 
 
-def _latest_indicator_values() -> dict[str, dict[str, tuple[int, float]]]:
-    if not HEALTH_DATASET.exists():
-        raise FileNotFoundError(
-            f"Processed health dataset not found: {HEALTH_DATASET}"
-        )
-
-    latest: dict[str, dict[str, tuple[int, float]]] = {}
-    with HEALTH_DATASET.open(encoding="utf-8-sig", newline="") as csv_file:
-        for row in csv.DictReader(csv_file):
-            indicator = row["indicator"].strip()
-            if indicator not in HEALTH_INDICATOR_WEIGHTS:
-                continue
-
-            country = row["country"].strip()
-            year = int(row["year"])
-            value = float(row["value"])
-            country_values = latest.setdefault(indicator, {})
-            previous = country_values.get(country)
-            if previous is None or year > previous[0]:
-                country_values[country] = (year, value)
-
-    return latest
-
-
-def _canonical_country(
-    country: str,
-    values: dict[str, dict[str, tuple[int, float]]],
-) -> str:
-    countries = {
-        item
-        for indicator_values in values.values()
-        for item in indicator_values
-    }
-    canonical = next(
-        (item for item in countries if item.casefold() == country.strip().casefold()),
-        None,
-    )
-    if canonical is None:
-        raise KeyError(f"Country not found: {country}")
-    return canonical
-
-
-def _health_vulnerability(
-    country: str,
-    values: dict[str, dict[str, tuple[int, float]]],
-) -> tuple[float, list[dict[str, Any]]]:
-    components: list[dict[str, Any]] = []
-    weighted_score = 0.0
-    available_weight = 0.0
-
-    for indicator, weight in HEALTH_INDICATOR_WEIGHTS.items():
-        country_values = values.get(indicator, {})
-        target = country_values.get(country)
-        if target is None or not country_values:
-            continue
-
-        all_values = [value for _, value in country_values.values()]
-        minimum = min(all_values)
-        maximum = max(all_values)
-        year, value = target
-        normalized = (
-            0.5 if maximum == minimum else (value - minimum) / (maximum - minimum)
-        )
-        weighted_score += normalized * weight
-        available_weight += weight
-        components.append(
-            {
-                "indicator": indicator,
-                "year": year,
-                "value": value,
-                "normalized_vulnerability": round(normalized, 3),
-            }
-        )
-
-    if not components:
-        raise ValueError(f"No health-risk indicators are available for {country}")
-
-    return weighted_score / available_weight, components
-
-
-def _risk_level(score: float) -> str:
-    if score < 35:
+def _level(probability: float) -> str:
+    if probability < 0.34:
         return "low"
-    if score < 65:
+    if probability < 0.67:
         return "moderate"
     return "high"
+
+
+def _weather_risk(
+    disease: str,
+    temperature_c: float,
+    rainfall_mm: float,
+    humidity_pct: float,
+) -> tuple[float, list[str]]:
+    evidence: list[str] = []
+
+    if disease == "dengue":
+        temperature = max(0.0, 1 - abs(temperature_c - 29.0) / 12.0)
+        rainfall = min(rainfall_mm / 200.0, 1.0)
+        humidity = min(max((humidity_pct - 45.0) / 45.0, 0.0), 1.0)
+    else:
+        temperature = max(0.0, 1 - abs(temperature_c - 27.0) / 13.0)
+        rainfall = min(rainfall_mm / 160.0, 1.0)
+        humidity = min(max((humidity_pct - 40.0) / 50.0, 0.0), 1.0)
+
+    if temperature >= 0.7:
+        evidence.append("temperature is favorable for mosquito activity")
+    if rainfall >= 0.65:
+        evidence.append("high rainfall may increase mosquito breeding habitat")
+    if humidity >= 0.65:
+        evidence.append("high humidity may support mosquito survival")
+
+    return (0.4 * temperature) + (0.35 * rainfall) + (0.25 * humidity), evidence
 
 
 def predict_disease_risk(
     *,
     country: str,
+    disease: str,
     temperature_c: float,
     rainfall_mm: float,
     humidity_pct: float,
-    disease: str = "mosquito_borne",
+    repo: HealthRepository = repository,
 ) -> dict[str, Any]:
-    """Estimate near-term mosquito-borne disease risk with explainable inputs.
+    resolved_country = repo.resolve_country(country)
+    normalized_disease = disease.strip().casefold()
+    if normalized_disease not in SUPPORTED_DISEASES:
+        raise KeyError(disease)
+    if rainfall_mm < 0 or not 0 <= humidity_pct <= 100:
+        raise ValueError("Weather inputs are outside valid ranges.")
 
-    This is a transparent hackathon decision-support model. It is deliberately
-    deterministic and is not a clinically validated outbreak forecast.
-    """
-
-    disease_key = disease.strip().casefold().replace("-", "_").replace(" ", "_")
-    if disease_key not in SUPPORTED_DISEASES:
-        raise ValueError(
-            f"Unsupported disease '{disease}'. Choose one of: "
-            f"{', '.join(sorted(SUPPORTED_DISEASES))}"
-        )
-
-    values = _latest_indicator_values()
-    canonical_country = _canonical_country(country, values)
-    health_score, health_components = _health_vulnerability(
-        canonical_country,
-        values,
+    weather_score, weather_evidence = _weather_risk(
+        normalized_disease,
+        temperature_c,
+        rainfall_mm,
+        humidity_pct,
     )
+    baseline = country_risk_score(resolved_country, repo)
+    baseline_score = baseline["risk_score"] / 100
+    probability = max(0.0, min(1.0, (0.70 * weather_score) + (0.30 * baseline_score)))
+    risk_score = round(probability * 100, 2)
 
-    temperature_suitability = max(0.0, 1.0 - abs(temperature_c - 28.0) / 12.0)
-    rainfall_pressure = min(max(rainfall_mm / 200.0, 0.0), 1.0)
-    humidity_pressure = min(max((humidity_pct - 50.0) / 40.0, 0.0), 1.0)
-    climate_score = (
-        0.35 * temperature_suitability
-        + 0.40 * rainfall_pressure
-        + 0.25 * humidity_pressure
-    )
+    health_evidence = [
+        {
+            "indicator": driver["indicator"],
+            "value": driver["latest_value"],
+            "risk_contribution": driver["risk_contribution"],
+        }
+        for driver in baseline["main_drivers"]
+    ]
+    if not health_evidence:
+        health_evidence = [{"indicator": "country_baseline", "value": baseline_score}]
 
-    score = round((0.70 * climate_score + 0.30 * health_score) * 100, 1)
-    level = _risk_level(score)
-    recommendations = {
-        "low": [
-            "Maintain routine vector and symptom surveillance.",
-            "Refresh the forecast when weather conditions change.",
-        ],
-        "moderate": [
-            "Increase mosquito and syndromic surveillance in exposed areas.",
-            "Verify diagnostic supplies and community messaging readiness.",
-        ],
-        "high": [
-            "Escalate vector-control and case-surveillance activities.",
-            "Pre-position diagnostics, treatment supplies, and response staff.",
-        ],
-    }
+    risk_level = _level(probability)
+    recommendations = [
+        "Strengthen vector surveillance and remove standing-water breeding sites.",
+        (
+            "Prepare targeted public-health messaging and clinical readiness."
+            if risk_level != "low"
+            else "Continue routine monitoring and prevention communication."
+        ),
+    ]
 
     return {
-        "country": canonical_country,
-        "disease": SUPPORTED_DISEASES[disease_key],
+        "country": resolved_country,
+        "disease": SUPPORTED_DISEASES[normalized_disease],
         "forecast_window": "next 14 days",
-        "risk_score": score,
-        "risk_probability": round(score / 100, 3),
-        "risk_level": level,
-        "model": {
-            "name": "RISING Explainable Climate-Health Risk Model",
-            "version": "1.0.0",
-            "type": "deterministic statistical scoring model",
-        },
-        "climate_inputs": {
-            "temperature_c": temperature_c,
-            "rainfall_mm": rainfall_mm,
-            "humidity_pct": humidity_pct,
-        },
-        "score_breakdown": {
-            "climate_suitability": round(climate_score * 100, 1),
-            "historical_health_vulnerability": round(health_score * 100, 1),
-            "weights": {"climate": 0.70, "health": 0.30},
-        },
-        "health_evidence": health_components,
-        "recommendations": recommendations[level],
-        "disclaimer": (
-            "Hackathon decision-support estimate only; it is not a clinical "
-            "diagnosis, an epidemiological forecast, or a substitute for local "
-            "public-health surveillance."
+        "risk_probability": round(probability, 4),
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+            "score_breakdown": {
+        "climate_suitability": round(weather_score * 100, 2),
+        "historical_health_vulnerability": round(
+            baseline_score * 100,
+            2,
         ),
+    },
+        "weather_evidence": weather_evidence,
+        "health_evidence": health_evidence,
+        "recommendations": recommendations,
+        "model": {
+            "name": "RISING Climate-Health Heuristic MVP",
+            "version": "1.0.0",
+            "type": "explainable weighted risk model",
+            "is_ai_prediction": False,
+        },
+        "disclaimer": "Not a clinical diagnosis or an outbreak declaration.",
     }

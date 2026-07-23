@@ -37,7 +37,7 @@ class Settings(BaseModel):
     """Validated runtime configuration loaded from environment variables."""
 
     app_name: str = "Project RISING API"
-    app_version: str = "2.0.0"
+    app_version: str = "4.0.0"
     environment: Literal["development", "test", "staging", "production"] = (
         "development"
     )
@@ -75,7 +75,7 @@ class Settings(BaseModel):
     def from_environment(cls) -> "Settings":
         return cls(
             app_name=os.getenv("APP_NAME", "Project RISING API"),
-            app_version=os.getenv("APP_VERSION", "2.0.0"),
+            app_version=os.getenv("APP_VERSION", "4.0.0"),
             environment=os.getenv("APP_ENV", "development").lower(),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
             log_json=_boolean("LOG_JSON", True),
@@ -105,3 +105,4 @@ class Settings(BaseModel):
 @lru_cache
 def get_settings() -> Settings:
     return Settings.from_environment()
+

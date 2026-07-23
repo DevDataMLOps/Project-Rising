@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
-from main import app
-
+from api.config import API_VERSION
+from main import app 
 
 client = TestClient(app)
 
@@ -11,7 +11,7 @@ def test_root() -> None:
 
     assert response.status_code == 200
     assert response.json()["project"] == "Project RISING"
-    assert response.json()["version"] == "2.0.0"
+    assert response.json()["version"] == API_VERSION
 
 
 def test_health_check() -> None:

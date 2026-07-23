@@ -10,13 +10,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from api.config import API_VERSION
 from api.logging import configure_logging
 from api.observability import metrics
+from api.routers.health import router as health_intelligence_router
+from api.routers.intelligence import router as intelligence_router
+from api.routers.ml import router as ml_router
+from api.routers.monitoring import router as monitoring_router
 from api.routes.climate import router as climate_router
-from api.routes.health import router as health_router
+from api.routes.health import router as base_health_router
+from api.routes.operations import router as operations_router
 from api.routes.pipeline import router as pipeline_router
 from api.routes.prediction import router as prediction_router
-from api.routes.risk import router as risk_router
 from api.security import verify_api_key
 from config.config import Settings, get_settings
 from warehouse.db import check_database
@@ -26,16 +31,20 @@ logger = logging.getLogger("rising.api")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    """Create the complete Phase 4 intelligence API with Phase 5 controls."""
     runtime = settings or get_settings()
     configure_logging(runtime.log_level, runtime.log_json)
 
     application = FastAPI(
-        title="Project RISING API",
+        title="Project RISING",
         description=(
-            "Pilot-grade climate-resilient healthcare intelligence platform "
-            "for ASEAN decision support. Not a clinical decision system."
+            "Pilot-grade ASEAN health intelligence, climate resilience, "
+            "disease-risk analysis, operational alerting, root-cause analysis, "
+            "and forecasting. Not a clinical decision system."
         ),
-        version=runtime.app_version,
+        version=API_VERSION,
+        docs_url="/docs",
+        redoc_url="/redoc",
     )
 
     application.state.settings = runtime
@@ -47,7 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=list(runtime.cors_origins),
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PATCH"],
         allow_headers=["Accept", "Content-Type", "X-API-Key", "X-Request-ID"],
     )
 
@@ -147,27 +156,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
         )
 
-    application.include_router(health_router, prefix="/api/v1")
+    # Original routes receive their version prefix here. They are registered
+    # first to preserve their established payloads and Phase 5 API-key gates.
     application.include_router(climate_router, prefix="/api/v1")
+    application.include_router(base_health_router, prefix="/api/v1")
     application.include_router(pipeline_router, prefix="/api/v1")
-    application.include_router(risk_router, prefix="/api/v1")
     application.include_router(prediction_router, prefix="/api/v1")
+
+    # Phase 3 routers already include /api/v1.
+    application.include_router(health_intelligence_router)
+    application.include_router(intelligence_router)
+    application.include_router(monitoring_router)
+
+    # Phase 4 operations declares /operations; Phase 4B ML includes /api/v1/ml.
+    application.include_router(operations_router, prefix="/api/v1")
+    application.include_router(ml_router)
 
     @application.get("/", tags=["System"])
     def root() -> dict[str, str]:
         return {
             "project": "Project RISING",
             "status": "running",
-            "version": runtime.app_version,
+            "version": API_VERSION,
             "maturity": "production-ready pilot",
             "description": "Climate-resilient healthcare decision-support platform",
+            "documentation": "/docs",
             "docs": "/docs",
         }
 
     @application.get("/health", tags=["System"])
     def health() -> dict[str, str]:
         """Liveness probe: the API process can serve requests."""
-        return {"status": "healthy", "service": runtime.app_name}
+        return {
+            "status": "healthy",
+            "service": runtime.app_name,
+            "version": API_VERSION,
+        }
 
     @application.get("/ready", tags=["System"])
     def readiness():
