@@ -98,6 +98,13 @@ def predict_disease_risk(
         "risk_probability": round(probability, 4),
         "risk_score": risk_score,
         "risk_level": risk_level,
+            "score_breakdown": {
+        "climate_suitability": round(weather_score * 100, 2),
+        "historical_health_vulnerability": round(
+            baseline_score * 100,
+            2,
+        ),
+    },
         "weather_evidence": weather_evidence,
         "health_evidence": health_evidence,
         "recommendations": recommendations,

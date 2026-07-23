@@ -197,17 +197,84 @@ def render_disease_risk_panel() -> None:
             humidity_pct=float(humidity_pct),
         )
 
-    prediction = st.session_state["disease_risk_prediction"]
+    prediction = st.session_state.get("disease_risk_prediction")
+
+    if not prediction:
+        st.info("Run a disease-risk prediction to populate this panel.")
+        return
+
     metric_cols = st.columns(4)
-    metric_cols[0].metric("Risk Score", f"{prediction['risk_score']}/100")
-    metric_cols[1].metric("Risk Level", prediction["risk_level"].title())
+
+    metric_cols[0].metric(
+        "Risk Score",
+        f"{prediction['risk_score']}/100",
+    )
+
+    metric_cols[1].metric(
+        "Risk Level",
+        prediction["risk_level"].title(),
+    )
+
+    score_breakdown = prediction.get("score_breakdown", {})
+
+    climate_suitability = score_breakdown.get("climate_suitability")
+    health_vulnerability = score_breakdown.get(
+        "historical_health_vulnerability"
+    )
+
     metric_cols[2].metric(
         "Climate Suitability",
-        f"{prediction['score_breakdown']['climate_suitability']}%",
+        (
+            f"{climate_suitability}%"
+            if climate_suitability is not None
+            else "Unavailable"
+        ),
     )
+
     metric_cols[3].metric(
         "Health Vulnerability",
-        f"{prediction['score_breakdown']['historical_health_vulnerability']}%",
+        (
+            f"{health_vulnerability}%"
+            if health_vulnerability is not None
+            else "Unavailable"
+        ),
+    )
+
+    metric_cols = st.columns(4)
+
+    metric_cols[0].metric(
+        "Risk Score",
+        f"{prediction['risk_score']}/100",
+    )
+
+    metric_cols[1].metric(
+        "Risk Level",
+        prediction["risk_level"].title(),
+    )
+
+    score_breakdown = prediction.get("score_breakdown", {})
+
+    climate_suitability = score_breakdown.get("climate_suitability")
+    health_vulnerability = score_breakdown.get(
+        "historical_health_vulnerability"
+    )
+
+    metric_cols[2].metric(
+        "Climate Suitability",
+        (
+            f"{climate_suitability}%"
+            if climate_suitability is not None
+            else "Unavailable"
+        ),
+    )
+
+    metric_cols[3].metric(
+        "Health Vulnerability",
+        (
+            f"{health_vulnerability}%"
+            if health_vulnerability is not None
+            else "Unavailable"
+        ),
     )
 
     evidence_col, action_col = st.columns([3, 2])
