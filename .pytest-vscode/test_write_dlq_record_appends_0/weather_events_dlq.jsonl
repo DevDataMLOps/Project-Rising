@@ -1,1 +1,0 @@
-{"original_payload": {"event_id": "bad-event"}, "error_type": "ValueError", "error_message": "country is missing", "retry_count": 5, "failed_at": "2026-06-21T14:10:00Z", "source_topic": "weather-events"}

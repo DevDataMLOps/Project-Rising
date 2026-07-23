@@ -10,3 +10,5 @@ data/streaming/
 htmlcov/
 *.log
 backups/
+
+.pytest-vscode/
