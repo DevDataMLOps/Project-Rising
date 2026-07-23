@@ -4,3 +4,11 @@ __pycache__/
 .pytest_cache/
 .pytest-tmp/
 data/streaming/
+.env
+.venv*/
+.coverage
+htmlcov/
+*.log
+backups/
+
+.pytest-vscode/

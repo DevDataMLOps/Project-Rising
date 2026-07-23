@@ -1,4 +1,4 @@
-name: Project RISING Tests
+name: Project RISING CI
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   test:
-    name: Pytest (Python 3.11)
+    name: Test and validate (Python 3.11)
     runs-on: ubuntu-latest
 
     steps:
@@ -28,4 +28,24 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run tests
-        run: python -m pytest -v
+        run: python -m pytest -q
+
+      - name: Compile Python modules
+        run: python -m compileall -q api config demo pipelines schemas streaming warehouse main.py
+
+      - name: Validate production configuration
+        env:
+          APP_ENV: production
+          REQUIRE_API_KEY: "true"
+          API_KEY: ci-only-api-key-000000000000
+          CORS_ORIGINS: https://pilot.example.org
+          TRUSTED_HOSTS: pilot.example.org
+        run: python -c "from config.config import get_settings; print(get_settings().environment)"
+
+  container:
+    name: Build container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pilot image
+        run: docker build --tag project-rising:${{ github.sha }} .

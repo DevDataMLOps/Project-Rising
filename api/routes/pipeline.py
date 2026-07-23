@@ -1,13 +1,15 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from api.services.data_service import get_pipeline_status
+from api.security import verify_api_key
 
 
 router = APIRouter(
     prefix="/pipeline",
     tags=["Pipeline Monitoring"],
+    dependencies=[Depends(verify_api_key)],
 )
 
 

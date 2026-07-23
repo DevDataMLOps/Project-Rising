@@ -1,0 +1,15 @@
+# Non-secret reference defaults. Runtime values come from environment variables;
+# see .env.example. This file is documentation, not a second config source.
+application:
+  name: Project RISING API
+  version: 4.0.0
+  environment: development
+observability:
+  log_level: INFO
+  json_logs: true
+  metrics_enabled: true
+limits:
+  max_request_body_bytes: 1048576
+persistence:
+  database_required: false
+

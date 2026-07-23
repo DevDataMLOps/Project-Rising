@@ -1,25 +1,46 @@
 services:
+  api:
+    build: .
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      API_KEY: ${API_KEY:-}
+      REQUIRE_API_KEY: ${REQUIRE_API_KEY:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8501}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-localhost,127.0.0.1,api}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_REQUIRED: ${DATABASE_REQUIRED:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
-    container_name: project-rising-postgres
     environment:
-      POSTGRES_DB: project_rising
-      POSTGRES_USER: rising_user
-      POSTGRES_PASSWORD: rising_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "55432:5432"
+      - "127.0.0.1:55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rising_user -d project_rising"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redpanda:
     image: redpandadata/redpanda:v24.2.8
-    container_name: project-rising-redpanda
     command:
       - redpanda
       - start
@@ -36,12 +57,13 @@ services:
       - --kafka-addr
       - PLAINTEXT://0.0.0.0:9092
       - --advertise-kafka-addr
-      - PLAINTEXT://localhost:9092
+      - PLAINTEXT://redpanda:9092
     ports:
-      - "9092:9092"
-      - "9644:9644"
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9644:9644"
     volumes:
       - redpanda_data:/var/lib/redpanda/data
+    restart: unless-stopped
 
 volumes:
   postgres_data:
