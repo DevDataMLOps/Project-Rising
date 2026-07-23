@@ -37,6 +37,11 @@ Open <http://127.0.0.1:8000/docs>, or get a real sample prediction:
 curl http://127.0.0.1:8000/api/v1/disease-risk/sample
 ```
 
+For a pilot-like local deployment, copy `.env.example` to `.env`, replace all
+placeholder secrets, then run `docker compose up --build -d`. Liveness is at
+`/health`, dependency readiness at `/ready`, and API-key-protected Prometheus
+metrics at `/metrics`. See the [pilot deployment runbook](docs/operations/pilot_runbook.md).
+
 Start the dashboard in a second terminal:
 
 ```bash
@@ -158,6 +163,8 @@ docker compose exec postgres psql -U rising_user -d project_rising -c "SELECT ev
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/health` | Service health check |
+| `GET` | `/ready` | Required data and dependency readiness |
+| `GET` | `/metrics` | Prometheus metrics (protected when API keys are enabled) |
 | `GET` | `/api/v1/health-indicators` | Filter processed health indicators |
 | `GET` | `/api/v1/climate-events` | Read accepted climate events when configured |
 | `GET` | `/api/v1/pipeline/status` | Inspect pipeline readiness |

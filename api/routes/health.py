@@ -17,8 +17,8 @@ router = APIRouter(
 
 @router.get("")
 def list_health_indicators(
-    country: str | None = Query(default=None),
-    indicator: str | None = Query(default=None),
+    country: str | None = Query(default=None, min_length=2, max_length=100),
+    indicator: str | None = Query(default=None, min_length=2, max_length=150),
     year: int | None = Query(
         default=None,
         ge=1900,

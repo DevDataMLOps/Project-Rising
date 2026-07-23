@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
 
 from api.services.data_service import get_country_risk
 
@@ -12,7 +12,9 @@ router = APIRouter(
 
 
 @router.get("/{country}/risk")
-def country_risk(country: str) -> dict[str, Any]:
+def country_risk(
+    country: str = Path(min_length=2, max_length=100),
+) -> dict[str, Any]:
     """Return a transparent comparative country-risk score."""
 
     try:

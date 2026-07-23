@@ -1,9 +1,10 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 
 from api.services.disease_risk_service import predict_disease_risk
+from api.security import verify_api_key
 
 
 router = APIRouter(
@@ -13,7 +14,9 @@ router = APIRouter(
 
 
 class DiseaseRiskRequest(BaseModel):
-    country: str = Field(examples=["Philippines"])
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    country: str = Field(min_length=2, max_length=100, examples=["Philippines"])
     disease: Literal["dengue", "malaria", "mosquito_borne"] = "dengue"
     temperature_c: float = Field(ge=-10, le=55, examples=[29.0])
     rainfall_mm: float = Field(ge=0, le=2000, examples=[180.0])
@@ -31,7 +34,7 @@ def _predict(payload: DiseaseRiskRequest) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
 
-@router.post("/predict")
+@router.post("/predict", dependencies=[Depends(verify_api_key)])
 def disease_risk_prediction(payload: DiseaseRiskRequest) -> dict[str, Any]:
     """Predict explainable 14-day mosquito-borne disease risk."""
 

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: project-rising-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: REQUIRE_API_KEY
+        value: "true"
+      - key: API_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUSTED_HOSTS
+        sync: false
+      - key: DATABASE_REQUIRED
+        value: "false"
