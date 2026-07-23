@@ -240,42 +240,9 @@ def render_disease_risk_panel() -> None:
         ),
     )
 
-    metric_cols = st.columns(4)
+    
 
-    metric_cols[0].metric(
-        "Risk Score",
-        f"{prediction['risk_score']}/100",
-    )
-
-    metric_cols[1].metric(
-        "Risk Level",
-        prediction["risk_level"].title(),
-    )
-
-    score_breakdown = prediction.get("score_breakdown", {})
-
-    climate_suitability = score_breakdown.get("climate_suitability")
-    health_vulnerability = score_breakdown.get(
-        "historical_health_vulnerability"
-    )
-
-    metric_cols[2].metric(
-        "Climate Suitability",
-        (
-            f"{climate_suitability}%"
-            if climate_suitability is not None
-            else "Unavailable"
-        ),
-    )
-
-    metric_cols[3].metric(
-        "Health Vulnerability",
-        (
-            f"{health_vulnerability}%"
-            if health_vulnerability is not None
-            else "Unavailable"
-        ),
-    )
+   
 
     evidence_col, action_col = st.columns([3, 2])
     with evidence_col:
