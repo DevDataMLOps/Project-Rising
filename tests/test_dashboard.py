@@ -31,3 +31,14 @@ def test_demo_outputs_exist_rejects_invalid_jsonl(tmp_path, monkeypatch) -> None
     monkeypatch.setattr(dashboard, "CHECKPOINT_PATH", checkpoint_path)
 
     assert dashboard.demo_outputs_exist() is False
+
+
+def test_warehouse_status_handles_optional_database(monkeypatch) -> None:
+    def database_not_configured():
+        raise RuntimeError("DATABASE_URL is not configured")
+
+    monkeypatch.setattr(dashboard, "get_engine", database_not_configured)
+
+    count, status = dashboard.get_warehouse_weather_count()
+
+    assert count is None

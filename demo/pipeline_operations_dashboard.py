@@ -121,6 +121,8 @@ def get_warehouse_weather_count() -> tuple[int | None, str]:
                 text("SELECT COUNT(*) FROM fact_weather_observation")
             )
             return int(result.scalar_one()), "Connected"
+    except RuntimeError:
+        return None, "Not configured"
     except SQLAlchemyError:
         return None, "Not connected"
 
