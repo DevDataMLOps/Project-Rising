@@ -50,6 +50,19 @@ exceeds two seconds, an ETL run produces no usable datasets, or DLQ volume
 increases unexpectedly. Logs are JSON and correlate on `request_id`; do not
 log API keys, database URLs, raw sensitive payloads, or personal data.
 
+## Controlled failure-recovery drills
+
+Run an isolated failure-recovery drill at least quarterly and after material
+changes to readiness checks, persistence, retry behavior, or deployment. Never
+inject a failure into the active pilot. Retain the scenario, commit, timestamps,
+expected and observed states, correlated request IDs, recovery verification,
+operator, and limitations under `docs/operations/evidence/`.
+
+The initial retained drill is
+[`2026-07-23-readiness-failure-recovery.md`](evidence/2026-07-23-readiness-failure-recovery.md).
+Its fail-closed and recovery behavior is also enforced by
+`tests/test_production_hardening.py`.
+
 ## Backup and restore
 
 The repository's CSV sources must be versioned or copied to immutable object

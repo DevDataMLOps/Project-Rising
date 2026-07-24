@@ -16,15 +16,27 @@ def test_production_configuration_rejects_insecure_values() -> None:
         Settings(require_api_key=True, api_key="short")
 
 
-def test_readiness_reports_missing_required_dataset(tmp_path: Path) -> None:
-    application = create_app(
-        Settings(environment="test", health_dataset=tmp_path / "missing.csv")
+def test_readiness_fails_and_recovers_when_dataset_is_restored(
+    tmp_path: Path,
+) -> None:
+    dataset = tmp_path / "controlled_health_dataset.csv"
+    client = TestClient(
+        create_app(Settings(environment="test", health_dataset=dataset))
     )
-    response = TestClient(application).get("/ready")
 
-    assert response.status_code == 503
-    assert response.json()["status"] == "not_ready"
-    assert response.json()["checks"]["health_dataset"]["status"] == "fail"
+    failure_response = client.get("/ready")
+    assert failure_response.status_code == 503
+    assert failure_response.json()["status"] == "not_ready"
+    assert failure_response.json()["checks"]["health_dataset"]["status"] == "fail"
+
+    dataset.write_text(
+        "country,indicator,year,value\nPhilippines,recovery_test,2026,1\n",
+        encoding="utf-8",
+    )
+    recovery_response = client.get("/ready")
+    assert recovery_response.status_code == 200
+    assert recovery_response.json()["status"] == "ready"
+    assert recovery_response.json()["checks"]["health_dataset"]["status"] == "pass"
 
 
 def test_security_headers_and_request_id_are_returned() -> None:
