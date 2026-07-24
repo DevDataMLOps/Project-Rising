@@ -8,8 +8,10 @@ national surveillance, or emergency-response decisions.
 
 Set `APP_ENV=production`, `REQUIRE_API_KEY=true`, a random `API_KEY` of at
 least 16 characters, explicit HTTPS dashboard origins in `CORS_ORIGINS`, and
-the externally visible host names in `TRUSTED_HOSTS`. Keep secrets in the
-deployment platform's secret manager, never in git or a container image.
+the externally visible host names in `TRUSTED_HOSTS`. On Render, the service's
+`RENDER_EXTERNAL_HOSTNAME` is added automatically; keep `TRUSTED_HOSTS` for
+any additional custom domains. Keep secrets in the deployment platform's
+secret manager, never in git or a container image.
 
 `DATABASE_REQUIRED=false` is correct while the checked-in CSV remains the API's
 authoritative data source. Set it to `true` only after provisioning PostgreSQL
@@ -29,8 +31,16 @@ docker compose logs --tail=100 api
 ```
 
 Use the included `render.yaml` as a Render Blueprint. Configure
-`CORS_ORIGINS` and `TRUSTED_HOSTS` in Render before traffic is enabled. TLS
-must terminate at the managed load balancer or reverse proxy.
+`CORS_ORIGINS` and any additional custom domains in `TRUSTED_HOSTS` before
+traffic is enabled. Render's generated external hostname is trusted
+automatically. TLS must terminate at the managed load balancer or reverse
+proxy.
+
+After each Render deployment, run the committed live smoke test:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke_render.ps1
+```
 
 ## Monitoring and alert thresholds
 

@@ -38,6 +38,21 @@ def test_security_headers_and_request_id_are_returned() -> None:
     assert response.headers["x-frame-options"] == "DENY"
 
 
+def test_render_external_hostname_is_accepted(monkeypatch) -> None:
+    hostname = "project-rising-api.onrender.com"
+    monkeypatch.setenv("TRUSTED_HOSTS", "localhost,127.0.0.1,testserver")
+    monkeypatch.setenv("RENDER_EXTERNAL_HOSTNAME", hostname)
+
+    settings = Settings.from_environment()
+    response = TestClient(create_app(settings)).get(
+        "/health", headers={"host": hostname}
+    )
+
+    assert hostname in settings.trusted_hosts
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+
+
 def test_oversized_request_is_rejected() -> None:
     client = TestClient(
         create_app(Settings(environment="test", max_request_body_bytes=1024))

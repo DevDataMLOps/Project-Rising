@@ -33,6 +33,14 @@ def _csv(name: str, default: str) -> tuple[str, ...]:
     )
 
 
+def _trusted_hosts() -> tuple[str, ...]:
+    hosts = list(_csv("TRUSTED_HOSTS", "localhost,127.0.0.1,testserver"))
+    render_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if render_hostname:
+        hosts.append(render_hostname)
+    return tuple(dict.fromkeys(hosts))
+
+
 class Settings(BaseModel):
     """Validated runtime configuration loaded from environment variables."""
 
@@ -82,9 +90,7 @@ class Settings(BaseModel):
             api_key=os.getenv("API_KEY") or None,
             require_api_key=_boolean("REQUIRE_API_KEY", False),
             cors_origins=_csv("CORS_ORIGINS", "http://localhost:8501"),
-            trusted_hosts=_csv(
-                "TRUSTED_HOSTS", "localhost,127.0.0.1,testserver"
-            ),
+            trusted_hosts=_trusted_hosts(),
             metrics_enabled=_boolean("METRICS_ENABLED", True),
             max_request_body_bytes=int(os.getenv("MAX_REQUEST_BODY_BYTES", "1048576")),
             health_dataset=Path(
