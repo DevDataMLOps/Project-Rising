@@ -34,6 +34,20 @@ def test_prediction_is_case_insensitive_for_country() -> None:
     assert prediction["country"] == "Philippines"
 
 
+def test_generic_mosquito_borne_prediction_is_supported() -> None:
+    prediction = predict_disease_risk(
+        country="Philippines",
+        disease="mosquito_borne",
+        temperature_c=28.0,
+        rainfall_mm=120.0,
+        humidity_pct=80.0,
+    )
+
+    assert prediction["disease"] == "Mosquito-borne disease"
+    assert 0 <= prediction["risk_score"] <= 100
+    assert prediction["risk_level"] in {"low", "moderate", "high"}
+
+
 def test_prediction_rejects_unknown_country() -> None:
     with pytest.raises(KeyError):
         predict_disease_risk(

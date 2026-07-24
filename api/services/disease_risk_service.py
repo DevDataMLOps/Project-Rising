@@ -5,7 +5,11 @@ from typing import Any
 from api.repositories.health_repository import HealthRepository, repository
 from api.services.risk_service import country_risk_score
 
-SUPPORTED_DISEASES = {"dengue": "Dengue", "malaria": "Malaria"}
+SUPPORTED_DISEASES = {
+    "dengue": "Dengue",
+    "malaria": "Malaria",
+    "mosquito_borne": "Mosquito-borne disease",
+}
 
 
 def _level(probability: float) -> str:
