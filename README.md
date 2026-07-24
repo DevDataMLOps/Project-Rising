@@ -57,25 +57,26 @@ Typhoons, floods, heatwaves, and rural infrastructure outages can delay public-h
 ## End-to-End Solution
 
 ```mermaid
-flowchart LR
-    subgraph Sources["Data sources"]
-        A["ASEAN health CSVs"]
-        B["Climate and weather events"]
+graph LR
+    subgraph Sources [Data sources]
+        A[ASEAN health CSVs]
+        B[Climate and weather events]
     end
-    A --> C["Batch ingestion and transformation"]
-    B --> D["Streaming ingestion"]
-    C --> E{"Schema and quality validation"}
+
+    A --> C[Batch ingestion and transformation]
+    B --> D[Streaming ingestion]
+    C --> E{Schema and quality validation}
     D --> E
-    E -->|"Invalid"| F["Dead Letter Queue"]
-    E -->|"Temporary failure"| G["Local buffer and retry"]
+    E -->|Invalid| F[Dead Letter Queue]
+    E -->|Temporary failure| G[Local buffer and retry]
     G --> E
-    E -->|"Valid"| H["Deduplication and checkpoints"]
-    H --> I["Trusted storage / PostgreSQL"]
-    I --> J["Feature calculation"]
-    J --> K["Explainable climate-health risk model"]
-    K --> L["FastAPI"]
-    K --> M["Streamlit dashboard"]
-    L --> N["Public-health decision support"]
+    E -->|Valid| H[Deduplication and checkpoints]
+    H --> I[Trusted storage and PostgreSQL]
+    I --> J[Feature calculation]
+    J --> K[Explainable climate-health risk model]
+    K --> L[FastAPI]
+    K --> M[Streamlit dashboard]
+    L --> N[Public-health decision support]
     M --> N
 ```
 
