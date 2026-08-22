@@ -4,6 +4,8 @@ RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation H
 
 Project RISING is a climate-resilient health data engineering platform designed to keep public-health data moving during network failures, disasters, and infrastructure disruptions across ASEAN.
 
+This project was built as a group hackathon project by a three-person team.
+
 The core promise is simple:
 
 ```text
