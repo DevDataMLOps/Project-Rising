@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from threading import Lock
 
 import pandas as pd
 import plotly.express as px
@@ -15,6 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from warehouse.db import get_engine  # noqa: E402
+from api.services.data_service import get_countries  # noqa: E402
+from api.services.disease_risk_service import predict_disease_risk  # noqa: E402
 
 
 STREAMING_DIR = PROJECT_ROOT / "data" / "streaming"
@@ -22,6 +25,7 @@ INPUT_PATH = STREAMING_DIR / "weather_events.jsonl"
 ACCEPTED_PATH = STREAMING_DIR / "accepted_weather_events.jsonl"
 DLQ_PATH = STREAMING_DIR / "weather_events_dlq.jsonl"
 CHECKPOINT_PATH = STREAMING_DIR / "checkpoints.txt"
+DEMO_GENERATION_LOCK = Lock()
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -30,8 +34,17 @@ def read_jsonl(path: Path) -> list[dict]:
 
     records = []
     for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            records.append(json.loads(line))
+        if not line.strip():
+            continue
+
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            # A partially written record must not take down the operations UI.
+            continue
+
+        if isinstance(record, dict):
+            records.append(record)
 
     return records
 
@@ -44,14 +57,17 @@ def count_lines(path: Path) -> int:
 
 
 def demo_outputs_exist() -> bool:
-    required_paths = [
+    jsonl_paths = [
         INPUT_PATH,
         ACCEPTED_PATH,
         DLQ_PATH,
-        CHECKPOINT_PATH,
     ]
 
-    return all(path.exists() and count_lines(path) > 0 for path in required_paths)
+    return (
+        all(path.exists() and len(read_jsonl(path)) > 0 for path in jsonl_paths)
+        and CHECKPOINT_PATH.exists()
+        and count_lines(CHECKPOINT_PATH) > 0
+    )
 
 
 def ensure_demo_outputs() -> tuple[bool, str | None]:
@@ -59,17 +75,21 @@ def ensure_demo_outputs() -> tuple[bool, str | None]:
     Streamlit Cloud deploys without generated local files because data/streaming
     is ignored by Git. Generate the non-Postgres demo outputs on first load.
     """
-    if demo_outputs_exist():
-        return False, None
+    with DEMO_GENERATION_LOCK:
+        if demo_outputs_exist():
+            return False, None
 
-    try:
-        from demo.run_streaming_demo import run_demo  # noqa: WPS433
+        try:
+            from demo.run_streaming_demo import run_demo  # noqa: WPS433
 
-        run_demo(load_postgres=False)
-    except Exception as error:  # pragma: no cover - displayed in Streamlit UI
-        return False, str(error)
+            run_demo(load_postgres=False)
+        except Exception as error:  # pragma: no cover - displayed in Streamlit UI
+            return False, str(error)
 
-    return True, None
+        if not demo_outputs_exist():
+            return False, "Demo output generation produced incomplete files."
+
+        return True, None
 
 
 def read_text_file(path: Path) -> str:
@@ -101,6 +121,8 @@ def get_warehouse_weather_count() -> tuple[int | None, str]:
                 text("SELECT COUNT(*) FROM fact_weather_observation")
             )
             return int(result.scalar_one()), "Connected"
+    except RuntimeError:
+        return None, "Not configured"
     except SQLAlchemyError:
         return None, "Not connected"
 
@@ -125,7 +147,7 @@ def show_event_table(events: list[dict], empty_message: str) -> None:
     if dataframe.empty:
         st.warning(empty_message)
     else:
-        st.dataframe(dataframe, use_container_width=True)
+        st.dataframe(dataframe, width="stretch")
 
 
 def show_raw_output(path: Path, language: str = "json") -> None:
@@ -135,6 +157,111 @@ def show_raw_output(path: Path, language: str = "json") -> None:
         return
 
     st.code(contents, language=language)
+
+
+def render_disease_risk_panel() -> None:
+    st.header("Climate-Health Decision Support")
+    st.caption(
+        "Explore a transparent 14-day mosquito-borne disease-risk estimate "
+        "using repository health indicators and a weather scenario."
+    )
+
+    with st.form("disease-risk-form"):
+        countries = get_countries()
+        default_country = countries.index("Philippines") if "Philippines" in countries else 0
+        input_cols = st.columns(5)
+        country = input_cols[0].selectbox(
+            "Country",
+            countries,
+            index=default_country,
+        )
+        disease = input_cols[1].selectbox(
+            "Disease",
+            ["dengue", "malaria", "mosquito_borne"],
+        )
+        temperature_c = input_cols[2].number_input(
+            "Temperature (C)", min_value=-10.0, max_value=55.0, value=29.0
+        )
+        rainfall_mm = input_cols[3].number_input(
+            "Rainfall (mm)", min_value=0.0, max_value=2000.0, value=180.0
+        )
+        humidity_pct = input_cols[4].slider(
+            "Humidity (%)", min_value=0, max_value=100, value=85
+        )
+        submitted = st.form_submit_button("Calculate disease risk", type="primary")
+
+    if submitted or "disease_risk_prediction" not in st.session_state:
+        st.session_state["disease_risk_prediction"] = predict_disease_risk(
+            country=country,
+            disease=disease,
+            temperature_c=temperature_c,
+            rainfall_mm=rainfall_mm,
+            humidity_pct=float(humidity_pct),
+        )
+
+    prediction = st.session_state.get("disease_risk_prediction")
+
+    if not prediction:
+        st.info("Run a disease-risk prediction to populate this panel.")
+        return
+
+    metric_cols = st.columns(4)
+
+    metric_cols[0].metric(
+        "Risk Score",
+        f"{prediction['risk_score']}/100",
+    )
+
+    metric_cols[1].metric(
+        "Risk Level",
+        prediction["risk_level"].title(),
+    )
+
+    score_breakdown = prediction.get("score_breakdown", {})
+
+    climate_suitability = score_breakdown.get("climate_suitability")
+    health_vulnerability = score_breakdown.get(
+        "historical_health_vulnerability"
+    )
+
+    metric_cols[2].metric(
+        "Climate Suitability",
+        (
+            f"{climate_suitability}%"
+            if climate_suitability is not None
+            else "Unavailable"
+        ),
+    )
+
+    metric_cols[3].metric(
+        "Health Vulnerability",
+        (
+            f"{health_vulnerability}%"
+            if health_vulnerability is not None
+            else "Unavailable"
+        ),
+    )
+
+    
+
+   
+
+    evidence_col, action_col = st.columns([3, 2])
+    with evidence_col:
+        st.write("Historical health evidence")
+        st.dataframe(
+            pd.DataFrame(prediction["health_evidence"]),
+            width="stretch",
+            hide_index=True,
+        )
+    with action_col:
+        st.write("Recommended actions")
+        for recommendation in prediction["recommendations"]:
+            st.markdown(f"- {recommendation}")
+
+    st.info(prediction["disclaimer"])
+    with st.expander("View API-ready prediction JSON"):
+        st.json(prediction)
 
 
 def main() -> None:
@@ -156,6 +283,9 @@ def main() -> None:
         retry recovery, and warehouse synchronization.
         """
     )
+
+    render_disease_risk_panel()
+    st.divider()
 
     generated_demo_outputs, demo_generation_error = ensure_demo_outputs()
     if generated_demo_outputs:
@@ -214,7 +344,7 @@ def main() -> None:
             file_status(CHECKPOINT_PATH),
         ]
     )
-    st.dataframe(output_files, use_container_width=True, hide_index=True)
+    st.dataframe(output_files, width="stretch", hide_index=True)
 
     st.subheader("Record Routing")
 
@@ -238,7 +368,7 @@ def main() -> None:
         title="Pipeline record movement",
     )
     chart.update_layout(showlegend=False)
-    st.plotly_chart(chart, use_container_width=True)
+    st.plotly_chart(chart, width="stretch")
 
     tab_generated, tab_accepted, tab_dlq, tab_checkpoints, tab_raw, tab_demo = st.tabs(
         [
@@ -279,7 +409,7 @@ def main() -> None:
                 for line in CHECKPOINT_PATH.read_text(encoding="utf-8").splitlines()
                 if line.strip()
             ]
-            st.dataframe(pd.DataFrame(checkpoints), use_container_width=True)
+            st.dataframe(pd.DataFrame(checkpoints), width="stretch")
 
     with tab_raw:
         st.write("Raw contents of the files produced by the streaming demo.")

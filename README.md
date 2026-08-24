@@ -1,144 +1,251 @@
 # Project RISING
 
-RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**.
+**Resilient public-health intelligence when climate disruption breaks normal infrastructure.**
 
-Project RISING is a climate-resilient health data engineering platform designed to keep public-health data moving during network failures, disasters, and infrastructure disruptions across ASEAN.
+[![Project RISING Tests](https://github.com/DevDataMLOps/Project-Rising/actions/workflows/tests.yml/badge.svg)](https://github.com/DevDataMLOps/Project-Rising/actions/workflows/tests.yml)
+![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This project was built as a group hackathon project by a three-person team.  
+[Live Dashboard](https://project-rising.streamlit.app/) | [Live API](https://project-rising-api.onrender.com/) | [Interactive API Docs](https://project-rising-api.onrender.com/docs) | [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) | [Source Code](https://github.com/DevDataMLOps/Project-Rising)
 
-The core promise is simple:
+This project was built as a group hackathon project by a three-person team.
 
-```text
-No critical health record should be lost during climate-induced connectivity failures.
+RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**. It combines governed ASEAN health data, resilient climate-event processing, an explainable disease-risk model, FastAPI endpoints, and an interactive Streamlit decision-support dashboard.
+
+## Quick Start
+
+From a fresh clone with Python 3.11+:
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pytest -q
 ```
 
-Instead of focusing only on prediction or dashboards, Project RISING focuses on the reliability layer that public-health systems need before analytics can be trusted: batch ingestion, real-time event processing, validation, retries, idempotency, dead-letter handling, and warehouse synchronization.
+Start the API:
 
-## Problem
-
-Climate events such as typhoons, floods, heatwaves, and rural infrastructure outages can delay or interrupt healthcare data collection. When connectivity fails, critical records may arrive late, duplicate, become malformed, or disappear before analysts and decision-makers can act.
-
-Project RISING addresses this by treating disruption as an expected condition, not an exception.
-
-## Solution
-
-Project RISING combines historical batch health data with simulated real-time climate/weather events in a resilient hybrid pipeline.
-
-```text
-CSV Batch Data
-       \
-        \
-Weather Stream
-        |
-        v
-Validation Layer
-        |
-        v
-Retry Mechanism
-        |
-        v
-Idempotency / Checkpoints
-        |
-   +----+----+
-   |         |
-Success   Failure
-   |         |
-   v         v
-Warehouse   DLQ
+```bash
+python -m uvicorn main:app --reload
 ```
 
-Accepted records move into trusted storage and PostgreSQL warehouse tables. Failed or malformed records are isolated in a Dead Letter Queue for review. Duplicate events are protected by checkpoints and warehouse constraints.
+Open <http://127.0.0.1:8000/docs>, or get a real sample prediction:
 
-## What This Proves
-
-- Historical ASEAN health CSV files can be processed through a governed batch ETL pipeline.
-- Real-time weather events can be validated, retried, deduplicated, and recovered after a simulated outage.
-- Bad records do not pollute the trusted analytics layer.
-- Accepted events can be loaded into PostgreSQL fact and dimension tables.
-- The system is reproducible with tests, schemas, governance docs, SQL, and Docker Compose.
-
-## Demo Commands
-
-Run the batch pipeline:
-
-```powershell
-py -m pipelines.run_etl
+```bash
+curl http://127.0.0.1:8000/api/v1/disease-risk/sample
 ```
 
-Run the streaming resilience demo:
+For a pilot-like local deployment, copy `.env.example` to `.env`, replace all
+placeholder secrets, then run `docker compose up --build -d`. Liveness is at
+`/health`, dependency readiness at `/ready`, and API-key-protected Prometheus
+metrics at `/metrics`. See the [pilot deployment runbook](docs/operations/pilot_runbook.md).
 
-```powershell
-py demo\run_streaming_demo.py
+Start the dashboard in a second terminal:
+
+```bash
+python -m streamlit run demo/pipeline_operations_dashboard.py
 ```
 
-Open the pipeline operations dashboard:
+The dashboard opens at <http://localhost:8501>. It automatically creates the small streaming-demo outputs when they do not exist.
 
-```powershell
-py -m streamlit run demo\pipeline_operations_dashboard.py
+## The Problem
+
+Typhoons, floods, heatwaves, and rural infrastructure outages can delay public-health data. Records may arrive late, duplicate, become malformed, or disappear before decision-makers can act. Project RISING treats disruption as an expected operating condition and preserves records through validation, buffering, retry, idempotency, and dead-letter isolation.
+
+## End-to-End Solution
+
+```mermaid
+graph LR
+    subgraph Sources [Data sources]
+        A[ASEAN health CSVs]
+        B[Climate and weather events]
+    end
+
+    A --> C[Batch ingestion and transformation]
+    B --> D[Streaming ingestion]
+    C --> E{Schema and quality validation}
+    D --> E
+    E -->|Invalid| F[Dead Letter Queue]
+    E -->|Temporary failure| G[Local buffer and retry]
+    G --> E
+    E -->|Valid| H[Deduplication and checkpoints]
+    H --> I[Trusted storage and PostgreSQL]
+    I --> J[Feature calculation]
+    J --> K[Explainable climate-health risk model]
+    K --> L[FastAPI]
+    K --> M[Streamlit dashboard]
+    L --> N[Public-health decision support]
+    M --> N
 ```
 
-If Streamlit is not installed yet, install the project dependencies first:
+The result is both operational resilience and a visible decision-support output: a country-specific, 14-day mosquito-borne disease-risk estimate with the climate and health factors that produced it.
 
-```powershell
-py -m pip install -r requirements.txt
+## Disease-Risk Prediction
+
+`POST /api/v1/disease-risk/predict` combines requested weather conditions with the latest available country values for malaria prevalence and infant mortality. The transparent model weights climate suitability at 70% and historical health vulnerability at 30%. It is deterministic, explainable, and intentionally labeled as a hackathon decision-support model—not a clinical or epidemiological forecast.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/disease-risk/predict \
+  -H "Content-Type: application/json" \
+  -d '{"country":"Philippines","disease":"dengue","temperature_c":29,"rainfall_mm":180,"humidity_pct":85}'
 ```
 
-Run the streaming demo with PostgreSQL warehouse loading:
+Example output (generated by the repository, abbreviated):
 
-```powershell
+```json
+{
+  "country": "Philippines",
+  "disease": "Dengue",
+  "forecast_window": "next 14 days",
+  "risk_score": 66.9,
+  "risk_probability": 0.669,
+  "risk_level": "high",
+  "model": {
+    "name": "RISING Explainable Climate-Health Risk Model",
+    "version": "1.0.0",
+    "type": "deterministic statistical scoring model"
+  },
+  "recommendations": [
+    "Escalate vector-control and case-surveillance activities.",
+    "Pre-position diagnostics, treatment supplies, and response staff."
+  ]
+}
+```
+
+Run the endpoint to obtain the current exact output. The checked-in test suite verifies that the wet-weather scenario has higher risk than a dry scenario.
+
+## Dashboard
+
+The Streamlit app provides two judge-ready views in one lightweight UI:
+
+- **Climate-health decision support:** choose country, disease, temperature, rainfall, and humidity; inspect the score, level, evidence, recommendations, and API-ready JSON.
+- **Pipeline operations:** inspect accepted events, DLQ records, checkpoints, retry recovery, record routing, and optional warehouse status.
+
+| Climate-health decision support | Pipeline operations dashboard |
+|---|---|
+| ![Climate-health decision-support dashboard](docs/images/climate-health-dashboard.png) | ![Operations dashboard](docs/images/operations-dashboard.png) |
+
+The deployed FastAPI includes interactive Swagger documentation at the
+[live `/docs` endpoint](https://project-rising-api.onrender.com/docs).
+
+## Full Demo Commands
+
+Run the batch ETL:
+
+```bash
+python -m pipelines.run_etl
+```
+
+Run the resilient streaming scenario:
+
+```bash
+python demo/run_streaming_demo.py
+```
+
+Optionally load accepted events into PostgreSQL:
+
+```bash
 docker compose up -d postgres
-py demo\run_streaming_demo.py --load-postgres
+python demo/run_streaming_demo.py --load-postgres
 ```
 
-Inspect loaded warehouse rows:
+Inspect warehouse rows:
 
-```powershell
+```bash
 docker compose exec postgres psql -U rising_user -d project_rising -c "SELECT event_id, observed_at, temperature_c, humidity_pct, rainfall_mm FROM fact_weather_observation ORDER BY observed_at DESC LIMIT 10;"
 ```
 
-Run tests:
+## API Reference
 
-```powershell
-py -m pytest
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | Service health check |
+| `GET` | `/ready` | Required data and dependency readiness |
+| `GET` | `/metrics` | Prometheus metrics (protected when API keys are enabled) |
+| `GET` | `/api/v1/health-indicators` | Filter processed health indicators |
+| `GET` | `/api/v1/climate-events` | Read accepted climate events when configured |
+| `GET` | `/api/v1/pipeline/status` | Inspect pipeline readiness |
+| `GET` | `/api/v1/countries/{country}/risk` | Legacy comparative country score |
+| `POST` | `/api/v1/disease-risk/predict` | Explainable climate-health prediction |
+| `GET` | `/api/v1/disease-risk/sample` | Ready-to-show prediction sample |
+
+Example health query:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/health-indicators?country=Philippines&indicator=malaria_prevalence&limit=5"
 ```
 
-## Demo Story
+## Technology Stack
 
-Imagine a typhoon disrupts connectivity in the Philippines.
+| Layer | Technology |
+|---|---|
+| API and validation | FastAPI, Pydantic, Uvicorn |
+| Data processing | Python, pandas, NumPy, Pandera |
+| Decision support | Explainable deterministic statistical model |
+| Dashboard | Streamlit, Plotly |
+| Streaming resilience | JSONL event stream, retry queue, DLQ, checkpoints |
+| Warehouse | PostgreSQL, SQLAlchemy, Docker Compose |
+| Quality | pytest, GitHub Actions |
 
-Project RISING receives health and climate-related events while the network is unstable. One record is malformed and is routed to the DLQ. Another record fails during the simulated outage and is marked for retry. When connectivity is restored, the event is recovered and written to accepted storage. Accepted events can then be synchronized into PostgreSQL for analytics.
-
-The message for judges:
+## Project Structure
 
 ```text
-The dashboard is not the product. The resilient pipeline is the product.
-Project RISING protects public-health data when climate disruption makes normal systems unreliable.
+Project-Rising/
+├── api/                 FastAPI routes and services
+│   ├── routes/          Health, climate, pipeline, and risk endpoints
+│   └── services/        Data access and disease-risk model
+├── data/                Raw and processed ASEAN datasets
+├── demo/                Stream resilience demo and Streamlit dashboard
+├── docs/                Architecture, governance, methodology, demo assets
+├── pipelines/           Batch extract, transform, validate, and load stages
+├── schemas/             Health and weather data contracts
+├── sql/                 Warehouse dimensions, facts, and metadata DDL
+├── streaming/           Producer, consumer, retry, DLQ, and deduplication
+├── tests/               API, model, pipeline, and resilience tests
+├── warehouse/           PostgreSQL connectivity and weather loader
+├── main.py              FastAPI application entry point
+└── docker-compose.yml   Local PostgreSQL service
 ```
 
-## Repository Guide
+## Minimum Viable Product (MVP): Capability Features
 
-- `pipelines/`: batch extraction, transformation, validation, loading, and metadata processing.
-- `streaming/`: simulated real-time event production, retry handling, checkpointing, and DLQ routing.
-- `warehouse/`: PostgreSQL loading utilities for accepted streaming events.
-- `schemas/`: data contracts for health and weather records.
-- `sql/`: warehouse dimension, fact, and metadata table definitions.
-- `demo/`: runnable streaming resilience demo and operations dashboard.
-- `docs/architecture/`: system, data flow, AI, security, and climate-resilience architecture notes.
-- `docs/governance/`: data contracts, lineage, quality rules, retention, incident response, and SLOs.
-- `tests/`: automated tests for ingestion, transformation, validation, schema checks, retries, DLQ, deduplication, and warehouse loading helpers.
+| Requirement | Implementation evidence | Status |
+|---|---|---|
+| ADHCRI / climate-resilient healthcare | Resilient hybrid pipeline, retries, DLQ, checkpoints | Implemented |
+| Health and climate data integration | Processed ASEAN indicators plus climate-event scenarios | Implemented |
+| AI / intelligent decision support | Explainable disease-risk endpoint and interactive controls | Implemented |
+| Working backend | FastAPI app and Swagger/OpenAPI docs | Implemented |
+| Data engineering / ETL | Batch pipeline, schema validation, metadata, warehouse loading | Implemented |
+| Interactive presentation | Streamlit decision-support and operations dashboard | Implemented |
+| End-to-end story | Source-to-decision diagram, API, dashboard, demo script | Implemented |
+| Reliability and cybersecurity | Validation, isolation, idempotency, security architecture | Implemented/design documented |
+| Testing and reproducibility | pytest suite and GitHub Actions | Implemented |
+| UN SDG alignment | SDG 3, 9, 13, and 17 | Aligned |
+| Public deployment | [API](https://project-rising-api.onrender.com/) and [Streamlit dashboard](https://project-rising.streamlit.app/) | Implemented |
 
-## Architecture Documentation
+## Documentation
 
-- [System Architecture](docs/architecture/01_system_architecture.md)
-- [Data Flow Architecture](docs/architecture/02_data_flow.md)
-- [AI Architecture](docs/architecture/03_ai_architecture.md)
-- [Security Architecture](docs/architecture/04_security_architecture.md)
-- [Climate-Resilience Architecture](docs/architecture/05_climate_resilience.md)
+- [System architecture](docs/architecture/01_system_architecture.md)
+- [End-to-end data flow](docs/architecture/02_data_flow.md)
+- [AI and decision-support architecture](docs/architecture/03_ai_architecture.md)
+- [Security architecture](docs/architecture/04_security_architecture.md)
+- [Climate-resilience architecture](docs/architecture/05_climate_resilience.md)
+- [Original resilience demo guide](docs/demo_script.md)
 
-## Elevator Pitch
+## Responsible Use and MVP Proficiency
 
-Project RISING ensures that no public-health data is lost during climate disasters.
+- The model uses aggregated public-health data and user-supplied weather conditions.
+- It provides an explainable preparedness signal, not patient-level advice.
+- It has not been trained or clinically validated against outbreak labels.
+- Simulated climate events prove resilience behavior; a live weather provider remains a production integration.
+- Human public-health teams remain responsible for decisions and local verification.
 
-Our hybrid data pipeline ingests historical health datasets and real-time climate events, validates every record, retries failed transmissions, guarantees idempotent processing, isolates malformed data in a Dead Letter Queue, and synchronizes accepted records into a warehouse when connectivity is restored.
+## License
 
-This enables ASEAN governments to maintain reliable health intelligence even when floods, typhoons, and rural network failures disrupt traditional healthcare systems.
+Released under the [MIT License](LICENSE).

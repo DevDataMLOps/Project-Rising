@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import OperationalError
+
+from config.config import get_settings
 
 from warehouse.db import get_engine
 
@@ -278,25 +281,22 @@ def load_weather_events_jsonl(
         "duplicates": 0,
     }
 
-    try:
-        with warehouse_engine.begin() as connection:
-            for event in events:
-                inserted = load_weather_event(
-                    connection=connection,
-                    event=event,
-                )
-
-                if inserted:
-                    counts["inserted"] += 1
-                else:
-                    counts["duplicates"] += 1
-    except OperationalError as exc:
-        raise RuntimeError(
-            "Could not connect to the PostgreSQL warehouse. "
-            "Confirm Docker Postgres is running and that DATABASE_URL matches "
-            "the credentials in docker-compose.yml. If the Docker volume was "
-            "created with old credentials, recreate it with: "
-            "docker compose down -v; docker compose up -d postgres"
-        ) from exc
+    max_retries = get_settings().database_max_retries
+    for attempt in range(max_retries + 1):
+        try:
+            with warehouse_engine.begin() as connection:
+                for event in events:
+                    inserted = load_weather_event(connection=connection, event=event)
+                    counts["inserted" if inserted else "duplicates"] += 1
+            break
+        except OperationalError as exc:
+            counts["inserted"] = 0
+            counts["duplicates"] = 0
+            if attempt >= max_retries:
+                raise RuntimeError(
+                    "Could not connect to the PostgreSQL warehouse after retries. "
+                    "Confirm the service is healthy and DATABASE_URL is correct."
+                ) from exc
+            time.sleep(min(2**attempt, 8))
 
     return counts

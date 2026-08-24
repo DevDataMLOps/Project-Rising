@@ -1,119 +1,70 @@
-# Project RISING AI Architecture
+# Project RISING Decision-Support Architecture
 
-## Role of AI
+## Current Capability
 
-AI is a downstream layer in Project RISING, not the foundation of the MVP.
-
-The foundation is the resilient data pipeline. AI should only run on data that has already passed validation, retry handling, deduplication, and warehouse loading.
-
-In other words:
+Project RISING includes a working, explainable climate-health risk model behind
+`POST /api/v1/disease-risk/predict`. The model is downstream of validated data:
 
 ```text
-Reliable data first.
-AI insights second.
+Reliable data first. Explainable decision support second.
 ```
-
-## Why AI Is Downstream
-
-During climate disruption, the first problem is not prediction. The first problem is data continuity.
-
-If records are lost, delayed, duplicated, or malformed, AI outputs become unreliable. Project RISING therefore prioritizes:
-
-- Data validation.
-- Retry and recovery.
-- DLQ isolation.
-- Idempotent processing.
-- Warehouse synchronization.
-
-Once those are stable, AI can help decision-makers interpret the trusted data.
-
-## Future AI Flow
 
 ```mermaid
 flowchart LR
-    A[(PostgreSQL Warehouse)] --> B[Feature Engineering]
-    B --> C[Trend Analysis]
-    B --> D[Risk Scoring]
-    B --> E[Forecasting Models]
-
-    C --> F[Explainable Insights]
-    D --> F
+    A["Processed ASEAN health indicators"] --> C["Latest country evidence"]
+    B["Temperature, rainfall, humidity"] --> D["Climate suitability features"]
+    C --> E["Historical health vulnerability"]
+    D --> F["Weighted risk model"]
     E --> F
-
-    F --> G[Public-Health Decision Support]
+    F --> G["14-day score and risk level"]
+    F --> H["Evidence and factor breakdown"]
+    F --> I["Preparedness recommendations"]
+    G --> J["FastAPI and Streamlit"]
+    H --> J
+    I --> J
 ```
 
-## Possible Future AI Capabilities
+## Method
 
-### 1. Health Trend Forecasting
+The version 1.0 model is a deterministic statistical scoring model. It does not
+claim to be trained on outbreak labels.
 
-Forecast future values for indicators such as:
+- Temperature suitability peaks near 28°C and falls as conditions move away.
+- Rainfall pressure rises to its cap at 200 mm.
+- Humidity pressure rises above 50% and reaches its cap at 90%.
+- Historical vulnerability normalizes the latest available malaria prevalence
+  and infant mortality values against countries in the repository dataset.
+- The final score weights climate suitability at 70% and historical health
+  vulnerability at 30%.
 
-- Life expectancy.
-- Infant mortality.
-- Under-five mortality.
-- Maternal mortality.
-- Government health expenditure.
+Thresholds are low below 35, moderate from 35 to below 65, and high at 65 or
+above. Every response includes its inputs, component scores, source indicator
+years and values, model version, recommendations, and responsible-use warning.
 
-### 2. Climate-Health Risk Scoring
+## Why This Approach Fits the MVP
 
-Combine climate and health indicators to estimate risk.
+The repository does not contain verified outbreak labels aligned to climate
+observations. Training a classifier on invented labels would produce a more
+impressive-sounding but less honest result. The transparent model provides a
+real, testable decision-support output while making its evidence and limits easy
+for judges and public-health users to inspect.
 
-Example:
+## Production Evolution
 
-```text
-Heavy rainfall
-+ high humidity
-+ weak health-system capacity
-+ historical disease burden
-= higher climate-health vulnerability
-```
+With authoritative, time-aligned surveillance labels, the same service boundary
+can support a validated forecasting model:
 
-### 3. Anomaly Detection
+1. Ingest live meteorological and disease-surveillance feeds.
+2. Build time-lagged features with documented provenance.
+3. Train and cross-validate by geography and season.
+4. Calibrate probabilities and measure false-negative rates.
+5. Monitor drift, missingness, and subgroup performance.
+6. Retain the current explanation and human-review contract.
 
-Detect unusual changes in health indicators or weather-linked event patterns.
+## Responsible Use
 
-Example:
-
-```text
-A country records a sudden increase in mortality or weather-risk events compared with its historical trend.
-```
-
-### 4. Explainable Decision Support
-
-Convert analytics into readable summaries for public-health teams.
-
-Example:
-
-```text
-The current vulnerability score is elevated because rainfall is high, under-five mortality remains above the regional average, and health expenditure is below peer countries.
-```
-
-## MVP Position
-
-For the hackathon MVP, AI should be presented as future decision support.
-
-The current project demonstrates the more important prerequisite:
-
-```text
-Can we keep trusted data flowing when climate disruption breaks normal connectivity?
-```
-
-That resilient data foundation makes future AI credible.
-
-## Responsible AI Principles
-
-Future AI work should follow these principles:
-
-- Use aggregated public-health data.
-- Avoid patient-level identification.
-- Explain model outputs.
-- Document limitations.
-- Avoid unsupported medical conclusions.
-- Keep human decision-makers in control.
-
-## Summary
-
-AI remains part of the Project RISING roadmap, but the MVP story is data engineering resilience.
-
-Judges should understand that Project RISING does not claim useful AI without first proving trustworthy data movement.
+- Use aggregated public-health data rather than patient identifiers.
+- Never present the score as a diagnosis or confirmed outbreak.
+- Keep source dates, assumptions, and model version visible.
+- Require local surveillance confirmation before operational escalation.
+- Keep human public-health decision-makers in control.

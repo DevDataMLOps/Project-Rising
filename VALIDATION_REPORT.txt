@@ -1,0 +1,23 @@
+Project RISING Phase 3 validation
+=================================
+
+Test command:
+  python -m pytest -q
+
+Result:
+  7 passed
+
+Validated against the processed ASEAN dataset:
+  Records: 1,690
+  Countries: 10
+  Indicators: 18
+  Data-quality status: pass
+
+Validated capabilities:
+  - API version 2.0.0
+  - Filtered health indicators
+  - Country health profiles
+  - Country risk scoring
+  - Dengue/malaria risk endpoint
+  - Anomaly detection
+  - Data-quality and pipeline readiness

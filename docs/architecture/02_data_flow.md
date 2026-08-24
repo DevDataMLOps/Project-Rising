@@ -39,6 +39,12 @@ flowchart TD
     I --> Q[Review and Remediation]
 
     P --> R[Analytics-Ready Facts and Dimensions]
+    R --> S[Climate and Health Feature Calculation]
+    S --> T[Explainable Disease-Risk Model]
+    T --> U[FastAPI Prediction Endpoint]
+    T --> V[Streamlit Decision-Support Dashboard]
+    U --> W[Public-Health Preparedness Actions]
+    V --> W
 ```
 
 ## Batch Data Flow
@@ -148,3 +154,35 @@ Accepted storage and warehouse tables are trusted.
 ```
 
 This separation is the governance foundation of Project RISING.
+
+## Decision-Support Flow
+
+The working prediction path combines two trusted input groups:
+
+1. The latest available country values for malaria prevalence and infant
+   mortality from the processed ASEAN health dataset.
+2. A current or scenario-based temperature, rainfall, and humidity observation.
+
+The model converts these values into normalized climate suitability and
+historical health vulnerability components. The final score uses documented
+70% climate and 30% health weights and returns the evidence, recommendations,
+model version, and limitations with every response.
+
+```text
+POST /api/v1/disease-risk/predict
+            |
+            v
+Validate country + weather inputs
+            |
+            v
+Read latest processed health evidence
+            |
+            v
+Calculate climate suitability + health vulnerability
+            |
+            v
+Return 14-day risk score, level, explanation, and actions
+```
+
+This prediction is a transparent hackathon preparedness signal. It is not a
+clinically validated outbreak forecast.

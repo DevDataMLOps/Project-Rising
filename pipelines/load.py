@@ -1,4 +1,6 @@
 from pathlib import Path
+import os
+import tempfile
 
 import pandas as pd
 
@@ -17,11 +19,18 @@ def load_processed_csv(
         exist_ok=True,
     )
 
-    dataframe.to_csv(
-        path,
-        index=False,
-        encoding="utf-8",
+    # Write beside the destination, then atomically replace it. A failed ETL
+    # therefore cannot leave the API serving a partially written CSV.
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
     )
+    os.close(file_descriptor)
+    temporary_path = Path(temporary_name)
+    try:
+        dataframe.to_csv(temporary_path, index=False, encoding="utf-8")
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
     print(
         f"Loaded {len(dataframe)} records "
