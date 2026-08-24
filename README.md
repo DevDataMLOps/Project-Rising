@@ -8,7 +8,9 @@
 ![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 ![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-[Live Dashboard](https://project-rising.streamlit.app/) · [Live API](https://project-rising-api.onrender.com/) · [Interactive API Docs](https://project-rising-api.onrender.com/docs) · [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) · [Source Code](https://github.com/DevDataMLOps/Project-Rising)
+[Live Dashboard](https://project-rising.streamlit.app/) | [Live API](https://project-rising-api.onrender.com/) | [Interactive API Docs](https://project-rising-api.onrender.com/docs) | [Hackathon Submission](https://www.10alytics.io/hackathon/projects/23) | [Source Code](https://github.com/DevDataMLOps/Project-Rising)
+
+This project was built as a group hackathon project by a three-person team.
 
 RISING means **Resilient Intelligent Surveillance & Integrated Next-Generation Healthcare**. It combines governed ASEAN health data, resilient climate-event processing, an explainable disease-risk model, FastAPI endpoints, and an interactive Streamlit decision-support dashboard.
 
